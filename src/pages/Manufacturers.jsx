@@ -1,0 +1,281 @@
+import { useState, useEffect } from 'react';
+import { manufacturerAPI } from '../services/api';
+import { 
+  Plus, 
+  Search, 
+  Edit2, 
+  Trash2, 
+  Factory,
+  Loader2,
+  X
+} from 'lucide-react';
+import toast from 'react-hot-toast';
+
+const Manufacturers = () => {
+  const [manufacturers, setManufacturers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showModal, setShowModal] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    email: '',
+    phone: '',
+    address: '',
+    city: '',
+    state: '',
+    contactPerson: '',
+    category: '',
+  });
+
+  useEffect(() => {
+    fetchManufacturers();
+  }, [search]);
+
+  const fetchManufacturers = async () => {
+    try {
+      const response = await manufacturerAPI.getAll({ search });
+      setManufacturers(response.data.data);
+    } catch (error) {
+      toast.error('Failed to load manufacturers');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    try {
+      if (editingId) {
+        await manufacturerAPI.update(editingId, formData);
+        toast.success('Manufacturer updated');
+      } else {
+        await manufacturerAPI.create(formData);
+        toast.success('Manufacturer created');
+      }
+      setShowModal(false);
+      resetForm();
+      fetchManufacturers();
+    } catch (error) {
+      toast.error('Failed to save manufacturer');
+    }
+  };
+
+  const handleEdit = (manufacturer) => {
+    setFormData({
+      name: manufacturer.name,
+      email: manufacturer.email,
+      phone: manufacturer.phone || '',
+      address: manufacturer.address || '',
+      city: manufacturer.city || '',
+      state: manufacturer.state || '',
+      contactPerson: manufacturer.contactPerson || '',
+      category: manufacturer.category || '',
+    });
+    setEditingId(manufacturer._id);
+    setShowModal(true);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm('Are you sure you want to delete this manufacturer?')) return;
+    try {
+      await manufacturerAPI.delete(id);
+      toast.success('Manufacturer deleted');
+      fetchManufacturers();
+    } catch (error) {
+      toast.error('Failed to delete');
+    }
+  };
+
+  const resetForm = () => {
+    setFormData({
+      name: '',
+      email: '',
+      phone: '',
+      address: '',
+      city: '',
+      state: '',
+      contactPerson: '',
+      category: '',
+    });
+    setEditingId(null);
+  };
+
+  return (
+    <div className="space-y-6 animate-fade-in">
+      {/* Header */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold">Manufacturers</h1>
+          <p className="text-[var(--text-secondary)]">Manage your manufacturers</p>
+        </div>
+        <button
+          onClick={() => { resetForm(); setShowModal(true); }}
+          className="btn btn-primary"
+        >
+          <Plus size={20} />
+          Add Manufacturer
+        </button>
+      </div>
+
+      {/* Search */}
+      <div className="card">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]" />
+          <input
+            type="text"
+            placeholder="Search manufacturers..."
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            className="input pl-10"
+          />
+        </div>
+      </div>
+
+      {/* List */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {loading ? (
+          <div className="col-span-full flex justify-center py-12">
+            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+          </div>
+        ) : manufacturers.length === 0 ? (
+          <div className="col-span-full text-center py-12">
+            <Factory className="w-12 h-12 mx-auto text-[var(--text-secondary)] mb-3" />
+            <p className="text-[var(--text-secondary)]">No manufacturers found</p>
+          </div>
+        ) : (
+          manufacturers.map((m) => (
+            <div key={m._id} className="card card-hover">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--primary)] to-orange-400 flex items-center justify-center text-white font-bold">
+                    {m.name.charAt(0).toUpperCase()}
+                  </div>
+                  <div>
+                    <p className="font-semibold">{m.name}</p>
+                    <p className="text-sm text-[var(--text-secondary)]">{m.email}</p>
+                  </div>
+                </div>
+                <div className="flex gap-1">
+                  <button
+                    onClick={() => handleEdit(m)}
+                    className="p-2 hover:bg-[var(--surface-hover)] rounded-lg"
+                  >
+                    <Edit2 size={16} />
+                  </button>
+                  <button
+                    onClick={() => handleDelete(m._id)}
+                    className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg"
+                  >
+                    <Trash2 size={16} />
+                  </button>
+                </div>
+              </div>
+              {(m.phone || m.city) && (
+                <div className="mt-3 pt-3 border-t border-[var(--border)] text-sm text-[var(--text-secondary)]">
+                  {m.phone && <p>📞 {m.phone}</p>}
+                  {m.city && <p>📍 {m.city}, {m.state}</p>}
+                </div>
+              )}
+            </div>
+          ))
+        )}
+      </div>
+
+      {/* Modal */}
+      {showModal && (
+        <div className="modal-overlay" onClick={() => setShowModal(false)}>
+          <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold">
+                {editingId ? 'Edit Manufacturer' : 'Add Manufacturer'}
+              </h2>
+              <button onClick={() => setShowModal(false)} className="p-1 hover:bg-[var(--surface-hover)] rounded">
+                <X size={20} />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Name *</label>
+                  <input
+                    type="text"
+                    value={formData.name}
+                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Email *</label>
+                  <input
+                    type="email"
+                    value={formData.email}
+                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                    className="input"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Phone</label>
+                  <input
+                    type="tel"
+                    value={formData.phone}
+                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Contact Person</label>
+                  <input
+                    type="text"
+                    value={formData.contactPerson}
+                    onChange={(e) => setFormData({ ...formData, contactPerson: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div className="sm:col-span-2">
+                  <label className="block text-sm font-medium mb-2">Address</label>
+                  <input
+                    type="text"
+                    value={formData.address}
+                    onChange={(e) => setFormData({ ...formData, address: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">City</label>
+                  <input
+                    type="text"
+                    value={formData.city}
+                    onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+                    className="input"
+                  />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">State</label>
+                  <input
+                    type="text"
+                    value={formData.state}
+                    onChange={(e) => setFormData({ ...formData, state: e.target.value })}
+                    className="input"
+                  />
+                </div>
+              </div>
+              <div className="flex gap-3 pt-4">
+                <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
+                  Cancel
+                </button>
+                <button type="submit" className="btn btn-primary flex-1">
+                  {editingId ? 'Update' : 'Create'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Manufacturers;
