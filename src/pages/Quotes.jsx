@@ -7,6 +7,7 @@ import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { 
   Plus, 
   Search, 
@@ -24,6 +25,8 @@ const Quotes = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, quoteNumber: '' });
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -46,15 +49,21 @@ const Quotes = () => {
     }
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this quote?')) return;
-    
+  const openDeleteConfirm = (quote) => {
+    setDeleteConfirm({ open: true, id: quote._id, quoteNumber: quote.quoteNumber });
+  };
+
+  const handleDelete = async () => {
+    setDeleteLoading(true);
     try {
-      await quoteAPI.delete(id);
+      await quoteAPI.delete(deleteConfirm.id);
       toast.success('Quote deleted');
+      setDeleteConfirm({ open: false, id: null, quoteNumber: '' });
       fetchQuotes();
     } catch (error) {
       toast.error('Failed to delete quote');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -205,7 +214,7 @@ const Quotes = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => handleDelete(quote._id)}
+                          onClick={() => openDeleteConfirm(quote)}
                           className="text-destructive hover:text-destructive"
                         >
                           <Trash2 size={16} />
@@ -244,6 +253,16 @@ const Quotes = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, id: null, quoteNumber: '' })}
+        onConfirm={handleDelete}
+        title="Delete Quote?"
+        message={`Are you sure you want to delete quote "${deleteConfirm.quoteNumber}"? This action cannot be undone.`}
+        loading={deleteLoading}
+      />
     </div>
   );
 };

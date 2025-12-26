@@ -4,6 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback } from '@/components/ui/avatar';
 import { Separator } from '@/components/ui/separator';
 import { Sheet, SheetContent, SheetTrigger } from '@/components/ui/sheet';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import {
   LayoutDashboard,
   FileText,
@@ -20,6 +21,7 @@ const Sidebar = () => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
+  const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
 
   const handleLogout = () => {
     logout();
@@ -58,7 +60,7 @@ const Sidebar = () => {
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                 isActive
-                  ? 'bg-primary text-primary-foreground'
+                  ? 'bg-primary text-white shadow-sm [text-shadow:_0_1px_2px_rgba(0,0,0,0.2)]'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
               }`
             }
@@ -88,7 +90,7 @@ const Sidebar = () => {
         </div>
         <Button
           variant="ghost"
-          onClick={handleLogout}
+          onClick={() => setShowLogoutConfirm(true)}
           className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
         >
           <LogOut size={20} className="mr-3" />
@@ -118,6 +120,17 @@ const Sidebar = () => {
       <aside className="hidden lg:flex fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border flex-col">
         <SidebarContent />
       </aside>
+
+      {/* Logout Confirmation */}
+      <ConfirmDialog
+        isOpen={showLogoutConfirm}
+        onClose={() => setShowLogoutConfirm(false)}
+        onConfirm={handleLogout}
+        title="Logout?"
+        message="Are you sure you want to logout from your account?"
+        confirmText="Logout"
+        variant="default"
+      />
     </>
   );
 };

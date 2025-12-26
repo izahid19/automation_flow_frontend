@@ -1,5 +1,8 @@
 import { useState, useEffect } from 'react';
 import { manufacturerAPI } from '../services/api';
+import { Input } from '@/components/ui/input';
+import { Card, CardContent } from '@/components/ui/card';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { 
   Plus, 
   Search, 
@@ -17,6 +20,8 @@ const Manufacturers = () => {
   const [search, setSearch] = useState('');
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' });
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -76,14 +81,21 @@ const Manufacturers = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this manufacturer?')) return;
+  const openDeleteConfirm = (m) => {
+    setDeleteConfirm({ open: true, id: m._id, name: m.name });
+  };
+
+  const handleDelete = async () => {
+    setDeleteLoading(true);
     try {
-      await manufacturerAPI.delete(id);
+      await manufacturerAPI.delete(deleteConfirm.id);
       toast.success('Manufacturer deleted');
+      setDeleteConfirm({ open: false, id: null, name: '' });
       fetchManufacturers();
     } catch (error) {
       toast.error('Failed to delete');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -119,18 +131,20 @@ const Manufacturers = () => {
       </div>
 
       {/* Search */}
-      <div className="card">
-        <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-[var(--text-secondary)]" />
-          <input
-            type="text"
-            placeholder="Search manufacturers..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="input pl-10"
-          />
-        </div>
-      </div>
+      <Card>
+        <CardContent className="p-4">
+          <div className="relative">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+            <Input
+              type="text"
+              placeholder="Search manufacturers..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              className="pl-10"
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -164,7 +178,7 @@ const Manufacturers = () => {
                     <Edit2 size={16} />
                   </button>
                   <button
-                    onClick={() => handleDelete(m._id)}
+                    onClick={() => openDeleteConfirm(m)}
                     className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg"
                   >
                     <Trash2 size={16} />
@@ -274,6 +288,16 @@ const Manufacturers = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, id: null, name: '' })}
+        onConfirm={handleDelete}
+        title="Delete Manufacturer?"
+        message={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`}
+        loading={deleteLoading}
+      />
     </div>
   );
 };

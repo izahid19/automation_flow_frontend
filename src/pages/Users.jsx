@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { authAPI } from '../services/api';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { 
   Plus, 
   Edit2, 
@@ -16,6 +17,8 @@ const Users = () => {
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState(null);
+  const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, name: '' });
+  const [deleteLoading, setDeleteLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -73,14 +76,21 @@ const Users = () => {
     setShowModal(true);
   };
 
-  const handleDelete = async (id) => {
-    if (!confirm('Are you sure you want to delete this user?')) return;
+  const openDeleteConfirm = (user) => {
+    setDeleteConfirm({ open: true, id: user._id, name: user.name });
+  };
+
+  const handleDelete = async () => {
+    setDeleteLoading(true);
     try {
-      await authAPI.deleteUser(id);
+      await authAPI.deleteUser(deleteConfirm.id);
       toast.success('User deleted');
+      setDeleteConfirm({ open: false, id: null, name: '' });
       fetchUsers();
     } catch (error) {
       toast.error('Failed to delete');
+    } finally {
+      setDeleteLoading(false);
     }
   };
 
@@ -179,7 +189,7 @@ const Users = () => {
                           <Edit2 size={16} />
                         </button>
                         <button
-                          onClick={() => handleDelete(user._id)}
+                          onClick={() => openDeleteConfirm(user)}
                           className="p-2 hover:bg-red-500/10 text-red-400 rounded-lg"
                         >
                           <Trash2 size={16} />
@@ -286,6 +296,16 @@ const Users = () => {
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation */}
+      <ConfirmDialog
+        isOpen={deleteConfirm.open}
+        onClose={() => setDeleteConfirm({ open: false, id: null, name: '' })}
+        onConfirm={handleDelete}
+        title="Delete User?"
+        message={`Are you sure you want to delete "${deleteConfirm.name}"? This action cannot be undone.`}
+        loading={deleteLoading}
+      />
     </div>
   );
 };

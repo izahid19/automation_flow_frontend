@@ -245,15 +245,17 @@ const QuoteDetail = () => {
               <table className="table">
                 <thead>
                   <tr>
-                    <th>Item</th>
-                    <th className="text-center">Qty</th>
-                    <th className="text-right">Rate</th>
-                    <th className="text-right">Amount</th>
+                    <th style={{ width: '8%' }} className="text-center">S.No</th>
+                    <th style={{ width: '35%' }}>Item</th>
+                    <th className="text-center" style={{ width: '12%' }}>Qty</th>
+                    <th className="text-right" style={{ width: '20%' }}>Rate</th>
+                    <th className="text-right" style={{ width: '25%' }}>Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {quote.items?.map((item, index) => (
                     <tr key={index}>
+                      <td className="text-center font-medium">{index + 1}</td>
                       <td>
                         <p className="font-medium">{item.name}</p>
                         {item.description && (
