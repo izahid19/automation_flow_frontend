@@ -13,15 +13,17 @@ import {
   TrendingUp,
   Plus,
   ArrowRight,
-  Loader2
+  Loader2,
+  FileSpreadsheet
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [exportLoading, setExportLoading] = useState(false);
 
   useEffect(() => {
     fetchDashboardData();
@@ -39,6 +41,27 @@ const Dashboard = () => {
       toast.error('Failed to load dashboard data');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleExportExcel = async () => {
+    setExportLoading(true);
+    try {
+      const response = await quoteAPI.exportExcel();
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      const filename = `Quotes_Export_${new Date().toISOString().split('T')[0]}.xlsx`;
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Excel file downloaded successfully!');
+    } catch (error) {
+      toast.error('Failed to export data to Excel');
+    } finally {
+      setExportLoading(false);
     }
   };
 
@@ -104,12 +127,28 @@ const Dashboard = () => {
           <h1 className="text-2xl font-bold">Welcome back, {user?.name?.split(' ')[0]}! 👋</h1>
           <p className="text-muted-foreground">Here's what's happening with your quotes</p>
         </div>
-        <Button asChild>
-          <Link to="/quotes/new">
-            <Plus size={20} className="mr-2" />
-            New Quote
-          </Link>
-        </Button>
+        <div className="flex gap-2">
+          {isAdmin && (
+            <Button 
+              variant="outline" 
+              onClick={handleExportExcel}
+              disabled={exportLoading}
+            >
+              {exportLoading ? (
+                <Loader2 size={20} className="mr-2 animate-spin" />
+              ) : (
+                <FileSpreadsheet size={20} className="mr-2" />
+              )}
+              {exportLoading ? 'Exporting...' : 'Export Excel'}
+            </Button>
+          )}
+          <Button asChild>
+            <Link to="/quotes/new">
+              <Plus size={20} className="mr-2" />
+              New Quote
+            </Link>
+          </Button>
+        </div>
       </div>
 
       {/* Stats Grid */}
