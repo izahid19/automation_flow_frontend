@@ -82,4 +82,12 @@ export const manufacturerAPI = {
   delete: (id) => api.delete(`/manufacturers/${id}`),
 };
 
+// Settings APIs
+export const settingsAPI = {
+  getAll: () => api.get('/settings'),
+  get: (key) => api.get(`/settings/${key}`),
+  update: (settings) => api.put('/settings', { settings }),
+};
+
 export default api;
+

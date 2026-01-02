@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { quoteAPI } from '@/services/api';
+import { useSocket } from '@/context/SocketContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -28,12 +29,9 @@ const Quotes = () => {
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, quoteNumber: '' });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
-  useEffect(() => {
-    fetchQuotes();
-  }, [search, statusFilter, pagination.page]);
-
-  const fetchQuotes = async () => {
+  const fetchQuotes = useCallback(async () => {
     try {
       const params = { page: pagination.page, limit: 10 };
       if (search) params.search = search;
@@ -47,7 +45,35 @@ const Quotes = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [search, statusFilter, pagination.page]);
+
+  useEffect(() => {
+    fetchQuotes();
+  }, [fetchQuotes]);
+
+  // Listen for real-time quote updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleQuoteUpdate = () => {
+      // Refresh quotes list when any quote event occurs
+      fetchQuotes();
+    };
+
+    socket.on('quote:created', handleQuoteUpdate);
+    socket.on('quote:submitted', handleQuoteUpdate);
+    socket.on('quote:approved', handleQuoteUpdate);
+    socket.on('quote:rejected', handleQuoteUpdate);
+    socket.on('quote:design-updated', handleQuoteUpdate);
+
+    return () => {
+      socket.off('quote:created', handleQuoteUpdate);
+      socket.off('quote:submitted', handleQuoteUpdate);
+      socket.off('quote:approved', handleQuoteUpdate);
+      socket.off('quote:rejected', handleQuoteUpdate);
+      socket.off('quote:design-updated', handleQuoteUpdate);
+    };
+  }, [socket, fetchQuotes]);
 
   const openDeleteConfirm = (quote) => {
     setDeleteConfirm({ open: true, id: quote._id, quoteNumber: quote.quoteNumber });

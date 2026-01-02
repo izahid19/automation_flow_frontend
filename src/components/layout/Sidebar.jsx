@@ -14,6 +14,7 @@ import {
   Users,
   LogOut,
   Menu,
+  Settings,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -29,12 +30,13 @@ const Sidebar = () => {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'sales_executive', 'md', 'designer'] },
-    { path: '/quotes', label: 'Quotes', icon: FileText, roles: ['admin', 'sales_executive', 'md', 'designer'] },
-    { path: '/approvals', label: 'Approvals', icon: CheckSquare, roles: ['admin', 'sales_executive', 'md'] },
-    { path: '/purchase-orders', label: 'Purchase Orders', icon: Package, roles: ['admin', 'sales_executive', 'md'] },
-    { path: '/manufacturers', label: 'Manufacturers', icon: Factory, roles: ['admin', 'sales_executive', 'md'] },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'sales_executive', 'manager', 'designer'] },
+    { path: '/quotes', label: 'Quotes', icon: FileText, roles: ['admin', 'sales_executive', 'manager', 'designer'] },
+    { path: '/approvals', label: 'Approvals', icon: CheckSquare, roles: ['admin', 'sales_executive', 'manager'] },
+    { path: '/purchase-orders', label: 'Purchase Orders', icon: Package, roles: ['admin', 'sales_executive', 'manager'] },
+    { path: '/manufacturers', label: 'Manufacturers', icon: Factory, roles: ['admin', 'manager'] },
     { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
+    { path: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'manager'] },
   ];
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(user?.role || ''));
@@ -83,9 +85,17 @@ const Sidebar = () => {
           </Avatar>
           <div className="flex-1 min-w-0">
             <p className="font-medium truncate">{user?.name}</p>
-            <p className="text-xs text-muted-foreground capitalize">
-              {user?.role?.replace('_', ' ')}
-            </p>
+            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+              user?.role === 'admin' 
+                ? 'bg-red-500/20 text-red-400' 
+                : user?.role === 'manager' 
+                ? 'bg-green-500/20 text-green-400'
+                : user?.role === 'designer'
+                ? 'bg-yellow-500/20 text-yellow-400'
+                : 'bg-blue-500/20 text-blue-400'
+            }`}>
+              {user?.role === 'sales_executive' ? 'Sales' : user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+            </span>
           </div>
         </div>
         <Button

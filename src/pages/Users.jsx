@@ -110,7 +110,7 @@ const Users = () => {
     const roleMap = {
       admin: { label: 'Admin', class: 'badge-error' },
       sales_executive: { label: 'Sales Executive', class: 'badge-primary' },
-      md: { label: 'Managing Director', class: 'badge-success' },
+      manager: { label: 'Manager', class: 'badge-success' },
       designer: { label: 'Designer', class: 'badge-warning' },
     };
     const r = roleMap[role] || { label: role, class: 'badge-secondary' };
@@ -258,7 +258,7 @@ const Users = () => {
                   className="input"
                 >
                   <option value="sales_executive">Sales Executive</option>
-                  <option value="md">Managing Director</option>
+                  <option value="manager">Manager</option>
                   <option value="designer">Designer</option>
                   <option value="admin">Admin</option>
                 </select>

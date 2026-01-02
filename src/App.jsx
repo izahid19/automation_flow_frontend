@@ -1,6 +1,7 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider, useAuth } from './context/AuthContext';
+import { SocketProvider } from './context/SocketContext';
 
 // Layout
 import AppLayout from './components/layout/AppLayout';
@@ -14,6 +15,7 @@ import QuoteForm from './pages/QuoteForm';
 import QuoteDetail from './pages/QuoteDetail';
 import Manufacturers from './pages/Manufacturers';
 import Users from './pages/Users';
+import Settings from './pages/Settings';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -60,6 +62,7 @@ const PublicRoute = ({ children }) => {
 function App() {
   return (
     <AuthProvider>
+      <SocketProvider>
       <BrowserRouter>
         <Toaster
           position="top-right"
@@ -128,12 +131,21 @@ function App() {
                 </ProtectedRoute>
               }
             />
+            <Route
+              path="settings"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <Settings />
+                </ProtectedRoute>
+              }
+            />
           </Route>
 
           {/* Catch all */}
           <Route path="*" element={<Navigate to="/dashboard" replace />} />
         </Routes>
       </BrowserRouter>
+      </SocketProvider>
     </AuthProvider>
   );
 }
