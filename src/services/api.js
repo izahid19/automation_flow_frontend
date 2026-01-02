@@ -59,7 +59,7 @@ export const quoteAPI = {
   rejectMD: (id, data) => api.post(`/quotes/${id}/reject-md`, data),
   updateDesign: (id, data) => api.post(`/quotes/${id}/design-status`, data),
   getStats: () => api.get('/quotes/stats'),
-  downloadPDF: (id) => api.get(`/quotes/${id}/pdf`, { responseType: 'blob' }),
+
   exportExcel: () => api.get('/quotes/export-excel', { responseType: 'blob' }),
 };
 
