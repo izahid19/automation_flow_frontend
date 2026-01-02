@@ -19,7 +19,6 @@ import {
   EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import html2pdf from 'html2pdf.js';
 
 const QuoteDetail = () => {
   const { id } = useParams();
@@ -126,33 +125,18 @@ const QuoteDetail = () => {
   };
 
   const handleDownloadPDF = async () => {
-    // Generate PDF from preview on frontend
-    if (!previewRef.current) {
-      // If preview not visible, show it temporarily
-      setShowPreview(true);
-      // Wait for render
-      await new Promise(resolve => setTimeout(resolve, 100));
-    }
-    
-    const element = previewRef.current;
-    if (!element) {
-      toast.error('Unable to generate PDF');
-      return;
-    }
-
-    const opt = {
-      margin: 10,
-      filename: `${quote.quoteNumber}.pdf`,
-      image: { type: 'jpeg', quality: 0.98 },
-      html2canvas: { scale: 2, useCORS: true },
-      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
-    };
-
     try {
-      await html2pdf().set(opt).from(element).save();
+      const response = await quoteAPI.downloadPDF(id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${quote.quoteNumber}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
       toast.success('PDF downloaded successfully');
     } catch (error) {
-      console.error('PDF generation error:', error);
+      console.error('PDF download error:', error);
       toast.error('Failed to download PDF');
     }
   };
@@ -459,18 +443,18 @@ const QuoteDetail = () => {
           </h2>
         </div>
         
-        <div ref={previewRef} className="p-8 min-h-[600px]" style={{ backgroundColor: '#ffffff', color: '#000000' }}>
+        <div className="bg-white text-black p-8 min-h-[600px]">
             {/* Header */}
-            <div className="border-b-4 pb-4 mb-6" style={{ borderColor: '#f97316' }}>
+            <div className="border-b-4 border-orange-500 pb-4 mb-6">
               <div className="flex justify-between items-start">
                 <div>
-                  <h1 className="text-3xl font-bold" style={{ color: '#1f2937' }}>QUOTATION</h1>
-                  <p className="mt-1" style={{ color: '#6b7280' }}>Draft Preview</p>
+                  <h1 className="text-3xl font-bold text-gray-800">QUOTATION</h1>
+                  <p className="text-gray-500 mt-1">Draft Preview</p>
                 </div>
                 <div className="text-right">
-                  <p className="text-sm" style={{ color: '#6b7280' }}>Quote Number</p>
-                  <p className="text-lg font-semibold" style={{ color: '#374151' }}>{quote.quoteNumber}</p>
-                  <p className="text-sm mt-2" style={{ color: '#6b7280' }}>Date: {new Date(quote.createdAt).toLocaleDateString('en-IN')}</p>
+                  <p className="text-sm text-gray-500">Quote Number</p>
+                  <p className="text-lg font-semibold text-gray-700">{quote.quoteNumber}</p>
+                  <p className="text-sm text-gray-500 mt-2">Date: {new Date(quote.createdAt).toLocaleDateString('en-IN')}</p>
                 </div>
               </div>
             </div>
@@ -478,46 +462,46 @@ const QuoteDetail = () => {
             {/* Client Details */}
             <div className="grid grid-cols-2 gap-8 mb-8">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>Bill To</h3>
-                <p className="text-lg font-semibold" style={{ color: '#1f2937' }}>{quote.clientName}</p>
-                <p style={{ color: '#4b5563' }}>{quote.clientEmail}</p>
-                <p style={{ color: '#4b5563' }}>{quote.clientPhone}</p>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
+                <p className="text-lg font-semibold text-gray-800">{quote.clientName}</p>
+                <p className="text-gray-600">{quote.clientEmail}</p>
+                <p className="text-gray-600">{quote.clientPhone}</p>
               </div>
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>Marketed By</h3>
-                <p className="text-lg font-semibold" style={{ color: '#1f2937' }}>{quote.marketedBy || 'N/A'}</p>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Marketed By</h3>
+                <p className="text-lg font-semibold text-gray-800">{quote.marketedBy || 'N/A'}</p>
               </div>
             </div>
 
             {/* Items Table */}
             <div className="mb-8">
-              <h3 className="text-sm font-semibold uppercase tracking-wider mb-3" style={{ color: '#6b7280' }}>Quote Items</h3>
+              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quote Items</h3>
               <table className="w-full border-collapse">
                 <thead>
-                  <tr style={{ backgroundColor: '#f3f4f6' }}>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>#</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Brand Name</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Composition</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Formulation</th>
-                    <th className="border px-3 py-2 text-left text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Packing</th>
-                    <th className="border px-3 py-2 text-center text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Qty</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>MRP</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Rate</th>
-                    <th className="border px-3 py-2 text-right text-xs font-semibold" style={{ borderColor: '#d1d5db', color: '#374151' }}>Amount</th>
+                  <tr className="bg-gray-100">
+                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Brand Name</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Composition</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Formulation</th>
+                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Packing</th>
+                    <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-700">Qty</th>
+                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">MRP</th>
+                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Rate</th>
+                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {quote.items?.map((item, index) => (
-                    <tr key={index} style={{ backgroundColor: index % 2 === 0 ? '#ffffff' : '#f9fafb' }}>
-                      <td className="border px-3 py-2 text-sm" style={{ borderColor: '#d1d5db' }}>{index + 1}</td>
-                      <td className="border px-3 py-2 text-sm font-medium" style={{ borderColor: '#d1d5db' }}>{item.brandName || '-'}</td>
-                      <td className="border px-3 py-2 text-sm" style={{ borderColor: '#d1d5db', color: '#4b5563' }}>{item.composition || '-'}</td>
-                      <td className="border px-3 py-2 text-sm" style={{ borderColor: '#d1d5db' }}>{item.formulationType || '-'}</td>
-                      <td className="border px-3 py-2 text-sm" style={{ borderColor: '#d1d5db' }}>{item.packing || '-'}</td>
-                      <td className="border px-3 py-2 text-sm text-center" style={{ borderColor: '#d1d5db' }}>{item.quantity}</td>
-                      <td className="border px-3 py-2 text-sm text-right" style={{ borderColor: '#d1d5db' }}>₹{item.mrp?.toFixed(2)}</td>
-                      <td className="border px-3 py-2 text-sm text-right" style={{ borderColor: '#d1d5db' }}>₹{item.rate?.toFixed(2)}</td>
-                      <td className="border px-3 py-2 text-sm text-right font-medium" style={{ borderColor: '#d1d5db' }}>₹{(item.quantity * item.rate)?.toFixed(2)}</td>
+                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                      <td className="border border-gray-300 px-3 py-2 text-sm">{index + 1}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.brandName || '-'}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">{item.composition || '-'}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm">{item.formulationType || '-'}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm">{item.packing || '-'}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.quantity}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{item.mrp?.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{item.rate?.toFixed(2)}</td>
+                      <td className="border border-gray-300 px-3 py-2 text-sm text-right font-medium">₹{(item.quantity * item.rate)?.toFixed(2)}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -527,55 +511,54 @@ const QuoteDetail = () => {
             {/* Totals */}
             <div className="flex justify-end mb-8">
               <div className="w-72">
-                <div className="flex justify-between py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
-                  <span style={{ color: '#4b5563' }}>Subtotal</span>
+                <div className="flex justify-between py-2 border-b border-gray-200">
+                  <span className="text-gray-600">Subtotal</span>
                   <span className="font-medium">₹{quote.subtotal?.toFixed(2)}</span>
                 </div>
                 {(quote.cylinderCharges || 0) > 0 && (
-                  <div className="flex justify-between py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
-                    <span style={{ color: '#4b5563' }}>Cylinder Charges</span>
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Cylinder Charges</span>
                     <span>₹{quote.cylinderCharges?.toFixed(2)}</span>
                   </div>
                 )}
                 {(quote.inventoryCharges || 0) > 0 && (
-                  <div className="flex justify-between py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
-                    <span style={{ color: '#4b5563' }}>Inventory Charges</span>
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Inventory Charges</span>
                     <span>₹{quote.inventoryCharges?.toFixed(2)}</span>
                   </div>
                 )}
                 {quote.discount > 0 && (
-                  <div className="flex justify-between py-2 border-b" style={{ borderColor: '#e5e7eb', color: '#16a34a' }}>
+                  <div className="flex justify-between py-2 border-b border-gray-200 text-green-600">
                     <span>Discount ({quote.discountPercent}%)</span>
                     <span>-₹{quote.discount?.toFixed(2)}</span>
                   </div>
                 )}
                 {quote.tax > 0 && (
-                  <div className="flex justify-between py-2 border-b" style={{ borderColor: '#e5e7eb' }}>
-                    <span style={{ color: '#4b5563' }}>Tax ({quote.taxPercent}%)</span>
+                  <div className="flex justify-between py-2 border-b border-gray-200">
+                    <span className="text-gray-600">Tax ({quote.taxPercent}%)</span>
                     <span>₹{quote.tax?.toFixed(2)}</span>
                   </div>
                 )}
                 <div className="flex justify-between py-3 text-lg font-bold">
                   <span>Total</span>
-                  <span style={{ color: '#ea580c' }}>₹{quote.totalAmount?.toFixed(2)}</span>
+                  <span className="text-orange-600">₹{quote.totalAmount?.toFixed(2)}</span>
                 </div>
               </div>
             </div>
 
             {/* Terms & Bank Details */}
-            <div className="grid grid-cols-2 gap-8 pt-6 border-t" style={{ borderColor: '#e5e7eb' }}>
+            <div className="grid grid-cols-2 gap-8 pt-6 border-t border-gray-200">
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>Terms & Conditions</h3>
-                <p className="text-sm whitespace-pre-line" style={{ color: '#4b5563' }}>{quote.terms || 'No terms specified'}</p>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h3>
+                <p className="text-sm text-gray-600 whitespace-pre-line">{quote.terms || 'No terms specified'}</p>
               </div>
               <div>
-                <h3 className="text-sm font-semibold uppercase tracking-wider mb-2" style={{ color: '#6b7280' }}>Account Details</h3>
-                <p className="text-sm whitespace-pre-line" style={{ color: '#4b5563' }}>{quote.bankDetails || 'No account details specified'}</p>
+                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Details</h3>
+                <p className="text-sm text-gray-600 whitespace-pre-line">{quote.bankDetails || 'No account details specified'}</p>
               </div>
             </div>
           </div>
         </div>
-
     </div>
   );
 };
