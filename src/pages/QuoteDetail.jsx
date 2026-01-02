@@ -242,27 +242,38 @@ const QuoteDetail = () => {
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Quote Items</h2>
             <div className="overflow-x-auto">
-              <table className="table">
+              <table className="table" style={{ tableLayout: 'auto' }}>
                 <thead>
                   <tr>
-                    <th style={{ width: '8%' }} className="text-center">S.No</th>
-                    <th style={{ width: '35%' }}>Item</th>
-                    <th className="text-center" style={{ width: '12%' }}>Qty</th>
-                    <th className="text-right" style={{ width: '20%' }}>Rate</th>
-                    <th className="text-right" style={{ width: '25%' }}>Amount</th>
+                    <th className="text-center whitespace-nowrap">#</th>
+                    <th className="whitespace-nowrap">Brand Name</th>
+                    <th className="whitespace-nowrap">Order Type</th>
+                    <th className="whitespace-nowrap">Category</th>
+                    <th className="whitespace-nowrap" style={{ minWidth: '200px' }}>Composition</th>
+                    <th className="whitespace-nowrap">Formulation</th>
+                    <th className="whitespace-nowrap">Packing</th>
+                    <th className="text-center whitespace-nowrap">Qty</th>
+                    <th className="text-right whitespace-nowrap">MRP</th>
+                    <th className="text-right whitespace-nowrap">Rate</th>
+                    <th className="text-right whitespace-nowrap">Amount</th>
                   </tr>
                 </thead>
                 <tbody>
                   {quote.items?.map((item, index) => (
                     <tr key={index}>
                       <td className="text-center font-medium">{index + 1}</td>
+                      <td className="font-medium">{item.brandName || '-'}</td>
                       <td>
-                        <p className="font-medium">{item.name}</p>
-                        {item.description && (
-                          <p className="text-xs text-[var(--text-secondary)]">{item.description}</p>
-                        )}
+                        <span className={`badge ${item.orderType === 'New' ? 'badge-success' : 'badge-secondary'}`}>
+                          {item.orderType || '-'}
+                        </span>
                       </td>
+                      <td className="text-sm">{item.categoryType || '-'}</td>
+                      <td className="text-sm">{item.composition || '-'}</td>
+                      <td className="text-sm">{item.formulationType || '-'}</td>
+                      <td className="text-sm">{item.packing || '-'}</td>
                       <td className="text-center">{item.quantity}</td>
+                      <td className="text-right">₹{item.mrp?.toFixed(2)}</td>
                       <td className="text-right">₹{item.rate?.toFixed(2)}</td>
                       <td className="text-right font-medium">
                         ₹{(item.quantity * item.rate)?.toFixed(2)}
@@ -321,6 +332,18 @@ const QuoteDetail = () => {
                 <span className="text-[var(--text-secondary)]">Subtotal</span>
                 <span>₹{quote.subtotal?.toFixed(2)}</span>
               </div>
+              {(quote.cylinderCharges || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-secondary)]">Cylinder Charges</span>
+                  <span>₹{quote.cylinderCharges?.toFixed(2)}</span>
+                </div>
+              )}
+              {(quote.inventoryCharges || 0) > 0 && (
+                <div className="flex justify-between">
+                  <span className="text-[var(--text-secondary)]">Inventory Charges</span>
+                  <span>₹{quote.inventoryCharges?.toFixed(2)}</span>
+                </div>
+              )}
               {quote.discount > 0 && (
                 <div className="flex justify-between text-green-500">
                   <span>Discount ({quote.discountPercent}%)</span>
