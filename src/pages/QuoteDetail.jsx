@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { quoteAPI } from '../services/api';
@@ -19,6 +19,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import html2pdf from 'html2pdf.js';
 
 const QuoteDetail = () => {
   const { id } = useParams();
@@ -29,6 +30,7 @@ const QuoteDetail = () => {
   const [actionLoading, setActionLoading] = useState(false);
   const [comments, setComments] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const previewRef = useRef(null);
 
   useEffect(() => {
     fetchQuote();
@@ -124,16 +126,33 @@ const QuoteDetail = () => {
   };
 
   const handleDownloadPDF = async () => {
+    // Generate PDF from preview on frontend
+    if (!previewRef.current) {
+      // If preview not visible, show it temporarily
+      setShowPreview(true);
+      // Wait for render
+      await new Promise(resolve => setTimeout(resolve, 100));
+    }
+    
+    const element = previewRef.current;
+    if (!element) {
+      toast.error('Unable to generate PDF');
+      return;
+    }
+
+    const opt = {
+      margin: 10,
+      filename: `${quote.quoteNumber}.pdf`,
+      image: { type: 'jpeg', quality: 0.98 },
+      html2canvas: { scale: 2, useCORS: true },
+      jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' }
+    };
+
     try {
-      const response = await quoteAPI.downloadPDF(id);
-      const url = window.URL.createObjectURL(new Blob([response.data]));
-      const link = document.createElement('a');
-      link.href = url;
-      link.setAttribute('download', `${quote.quoteNumber}.pdf`);
-      document.body.appendChild(link);
-      link.click();
-      link.remove();
+      await html2pdf().set(opt).from(element).save();
+      toast.success('PDF downloaded successfully');
     } catch (error) {
+      console.error('PDF generation error:', error);
       toast.error('Failed to download PDF');
     }
   };
@@ -439,7 +458,7 @@ const QuoteDetail = () => {
             </h2>
           </div>
           
-          <div className="bg-white text-black p-8 min-h-[600px]">
+          <div ref={previewRef} className="bg-white text-black p-8 min-h-[600px]">
             {/* Header */}
             <div className="border-b-4 border-orange-500 pb-4 mb-6">
               <div className="flex justify-between items-start">
