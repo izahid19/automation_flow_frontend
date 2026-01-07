@@ -439,7 +439,7 @@ const QuoteDetail = () => {
         <div className="p-4 bg-[var(--primary)]/10 border-b border-[var(--border)]">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Eye size={20} />
-            Quote Preview (PDF Format)
+            Quote Preview (PDF via PNG)
           </h2>
         </div>
         
