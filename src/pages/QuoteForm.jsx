@@ -21,37 +21,21 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { useAuth } from '@/context/AuthContext';
-
-const PACKING_OPTIONS = {
-  'Tablet': ['10x10', '10x1x10', '10x15', '20x10', '10x3', '10x5', '10x6', '10x7'],
-  'Capsule': ['10x10', '10x1x10', '10x15', '20x10', '10x3', '10x5', '10x6', '10x7'],
-  'Soft Gelatine': ['10x10', '10x1x10', '10x15', '20x10', '10x3', '10x5', '10x6', '10x7'],
-  'Syrup': ['200ml', '170ml', '150ml', '100ml', '30ml', '15ml', '10ml', '5ml', '4ml', '2ml'],
-  'Ointment/Cream': ['5gm', '10gm', '15gm', '20gm', '30gm', '50gm'],
-  'Sachet': ['10x1gm', '20x1gm', '25x1gm', '30x1gm', '50x1gm', '10x3gm', '20x3gm', '10x5gm', '20x5gm', '10x7.5gm', '20x7.5gm', '10x1x8gm', '20x1x8gm'],
-};
-
-const PACKAGING_OPTIONS = {
-  'Tablet': ['Alu Alu', 'Blister', 'Aluminium'],
-  'Capsule': ['Alu Alu', 'Blister', 'Aluminium'],
-  'Soft Gelatine': ['Alu Alu', 'Blister', 'Aluminium'],
-  'Syrup': ['Only label', 'Sticker label', 'Metalic label', 'With carton', 'With metalic carton'],
-  'Ointment/Cream': ['With carton', 'With metalic carton', 'With flap'],
-  'Sachet': ['Only label', 'Sticker label', 'Metalic label', 'With carton', 'With metalic carton'],
-};
-
-const DEFAULT_ITEM = {
-  brandName: '',
-  orderType: 'New',
-  categoryType: 'Drug',
-  formulationType: 'Tablet',
-  composition: '',
-  packing: '',
-  packagingType: '',
-  quantity: 1,
-  mrp: 0,
-  rate: 0,
-};
+import QuotePreview from '@/components/QuotePreview';
+import { 
+  PACKING_OPTIONS, 
+  PACKAGING_OPTIONS, 
+  FORMULATION_TYPES 
+} from '@/constants/formulation.constants';
+import { DEFAULT_ITEM } from '@/constants/quote.constants';
+import { useQuoteForm } from '@/hooks/useQuoteForm';
+import { useQuoteValidation } from '@/hooks/useQuoteValidation';
+import { calculateQuoteTotals } from '@/utils/quoteCalculations';
+import { 
+  ClientDetailsSection, 
+  QuoteSummaryCard, 
+  AdditionalInfoSection 
+} from '@/components/quote';
 
 const QuoteForm = () => {
   const { user } = useAuth();
@@ -73,6 +57,11 @@ const QuoteForm = () => {
     terms: 'Payment due within 30 days. All prices in INR.',
     bankDetails: '',
   });
+  const [companySettings, setCompanySettings] = useState({
+    companyPhone: '+917696275527',
+    companyEmail: 'user@gmail.com',
+    invoiceLabel: 'QUOTATION'
+  });
 
   // Fetch default settings on component mount
   useEffect(() => {
@@ -85,6 +74,11 @@ const QuoteForm = () => {
             terms: response.data.data.terms || prev.terms,
             bankDetails: response.data.data.bankDetails || '',
           }));
+          setCompanySettings({
+            companyPhone: response.data.data.companyPhone || '+917696275527',
+            companyEmail: response.data.data.companyEmail || 'user@gmail.com',
+            invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION'
+          });
         }
       } catch (error) {
         console.error('Failed to fetch settings:', error);
@@ -187,11 +181,19 @@ const QuoteForm = () => {
 
   const calculateTotals = () => {
     const subtotal = formData.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
-    const discount = (subtotal * formData.discountPercent) / 100;
-    const afterDiscount = subtotal - discount;
-    const tax = (afterDiscount * formData.taxPercent) / 100;
-    const total = afterDiscount + tax + (parseFloat(formData.cylinderCharges) || 0) + (parseFloat(formData.inventoryCharges) || 0);
-    return { subtotal, discount, tax, total };
+    const cylinderCharges = parseFloat(formData.cylinderCharges) || 0;
+    const inventoryCharges = parseFloat(formData.inventoryCharges) || 0;
+    
+    const taxableAmount = subtotal + cylinderCharges + inventoryCharges;
+    const tax = (taxableAmount * formData.taxPercent) / 100;
+    
+    // Total includes taxable amount + tax
+    const total = taxableAmount + tax;
+    
+    // Advance Payment is 35% of Total
+    const advancePayment = total * 0.35;
+
+    return { subtotal, tax, total, advancePayment };
   };
 
   const handleSubmit = async (submitForApproval = false) => {
@@ -225,7 +227,7 @@ const QuoteForm = () => {
     }
   };
 
-  const { subtotal, discount, tax, total } = calculateTotals();
+  const { subtotal, tax, total, advancePayment } = calculateTotals();
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -644,25 +646,7 @@ const QuoteForm = () => {
                   />
                 </div>
 
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="discountPercent" className="text-muted-foreground">Discount (%)</Label>
-                  <Input
-                    id="discountPercent"
-                    type="number"
-                    name="discountPercent"
-                    value={formData.discountPercent}
-                    onChange={handleChange}
-                    className="w-20 text-right"
-                    min="0"
-                    max="100"
-                  />
-                </div>
-                {discount > 0 && (
-                  <div className="flex justify-between text-green-500">
-                    <span>Discount</span>
-                    <span>-₹{discount.toFixed(2)}</span>
-                  </div>
-                )}
+
 
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="taxPercent" className="text-muted-foreground">Tax (%)</Label>
@@ -689,6 +673,10 @@ const QuoteForm = () => {
                 <div className="flex justify-between text-lg font-bold">
                   <span>Total</span>
                   <span className="text-primary">₹{total.toFixed(2)}</span>
+                </div>
+                <div className="flex justify-between text-sm font-semibold text-muted-foreground pt-2 border-t border-dashed">
+                  <span>Advance Payment (35%)</span>
+                  <span>₹{advancePayment.toFixed(2)}</span>
                 </div>
               </div>
 
@@ -725,122 +713,7 @@ const QuoteForm = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="p-0">
-            {/* Quote Preview Document */}
-            <div className="bg-white text-black p-8 min-h-[600px]">
-              {/* Header */}
-              <div className="border-b-4 border-orange-500 pb-4 mb-6">
-                <div className="flex justify-between items-start">
-                  <div>
-                    <h1 className="text-3xl font-bold text-gray-800">QUOTATION</h1>
-                    <p className="text-gray-500 mt-1">Draft Preview</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-gray-500">Quote Number</p>
-                    <p className="text-lg font-semibold text-gray-700">QT-XXXX-XXXX</p>
-                    <p className="text-sm text-gray-500 mt-2">Date: {new Date().toLocaleDateString()}</p>
-                  </div>
-                </div>
-              </div>
-
-              {/* Client Details */}
-              <div className="grid grid-cols-2 gap-8 mb-8">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
-                  <p className="text-lg font-semibold text-gray-800">{formData.partyName || 'Party Name'}</p>
-                  <p className="text-gray-600">{formData.clientEmail || 'client@email.com'}</p>
-                  <p className="text-gray-600">{formData.clientPhone || '+91 XXXXX XXXXX'}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Marketed By</h3>
-                  <p className="text-lg font-semibold text-gray-800">{formData.marketedBy || 'Sales Person'}</p>
-                </div>
-              </div>
-
-              {/* Items Table */}
-              <div className="mb-8">
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quote Items</h3>
-                <table className="w-full border-collapse">
-                  <thead>
-                    <tr className="bg-gray-100">
-                      <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
-                      <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Brand Name</th>
-                      <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Composition</th>
-                      <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Formulation</th>
-                      <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Packing</th>
-                      <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-700">Qty</th>
-                      <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">MRP</th>
-                      <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Rate</th>
-                      <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {formData.items.map((item, index) => (
-                      <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{index + 1}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.brandName || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">{item.composition || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.formulationType}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm">{item.packing || '-'}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.quantity}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{item.mrp.toFixed(2)}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{item.rate.toFixed(2)}</td>
-                        <td className="border border-gray-300 px-3 py-2 text-sm text-right font-medium">₹{(item.quantity * item.rate).toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-
-              {/* Totals */}
-              <div className="flex justify-end mb-8">
-                <div className="w-72">
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Subtotal</span>
-                    <span className="font-medium">₹{subtotal.toFixed(2)}</span>
-                  </div>
-                  {parseFloat(formData.cylinderCharges) > 0 && (
-                    <div className="flex justify-between py-2 border-b border-gray-200">
-                      <span className="text-gray-600">Cylinder Charges</span>
-                      <span>₹{parseFloat(formData.cylinderCharges).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {parseFloat(formData.inventoryCharges) > 0 && (
-                    <div className="flex justify-between py-2 border-b border-gray-200">
-                      <span className="text-gray-600">Inventory Charges</span>
-                      <span>₹{parseFloat(formData.inventoryCharges).toFixed(2)}</span>
-                    </div>
-                  )}
-                  {discount > 0 && (
-                    <div className="flex justify-between py-2 border-b border-gray-200 text-green-600">
-                      <span>Discount ({formData.discountPercent}%)</span>
-                      <span>-₹{discount.toFixed(2)}</span>
-                    </div>
-                  )}
-                  {tax > 0 && (
-                    <div className="flex justify-between py-2 border-b border-gray-200">
-                      <span className="text-gray-600">Tax ({formData.taxPercent}%)</span>
-                      <span>₹{tax.toFixed(2)}</span>
-                    </div>
-                  )}
-                  <div className="flex justify-between py-3 text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-orange-600">₹{total.toFixed(2)}</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Terms & Bank Details */}
-              <div className="grid grid-cols-2 gap-8 pt-6 border-t border-gray-200">
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h3>
-                  <p className="text-sm text-gray-600 whitespace-pre-line">{formData.terms || 'No terms specified'}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Details</h3>
-                  <p className="text-sm text-gray-600 whitespace-pre-line">{formData.bankDetails || 'No account details specified'}</p>
-                </div>
-              </div>
-            </div>
+            <QuotePreview quote={formData} isDraft={true} />
           </CardContent>
         </Card>
       )}

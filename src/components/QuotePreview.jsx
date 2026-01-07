@@ -1,0 +1,187 @@
+import { useState, useEffect } from 'react';
+import { settingsAPI } from '../services/api';
+
+const QuotePreview = ({ quote, isDraft = false }) => {
+  const [companySettings, setCompanySettings] = useState({
+    companyPhone: '+917696275527',
+    companyEmail: 'user@gmail.com',
+    invoiceLabel: 'QUOTATION'
+  });
+
+  useEffect(() => {
+    fetchCompanySettings();
+  }, []);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const response = await settingsAPI.getAll();
+      if (response.data.success) {
+        setCompanySettings({
+          companyPhone: response.data.data.companyPhone || '+917696275527',
+          companyEmail: response.data.data.companyEmail || 'user@gmail.com',
+          invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch company settings:', error);
+    }
+  };
+
+  const items = quote?.items || [];
+  const calculateTotals = () => {
+    const subtotal = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
+    const cylinderCharges = parseFloat(quote?.cylinderCharges) || 0;
+    const inventoryCharges = parseFloat(quote?.inventoryCharges) || 0;
+    
+    const taxableAmount = subtotal + cylinderCharges + inventoryCharges;
+    const tax = (taxableAmount * (quote?.taxPercent || 0)) / 100;
+    
+    // Total includes taxable amount + tax
+    const total = taxableAmount + tax;
+    
+    // Advance Payment is 35% of Total
+    const advancePayment = total * 0.35;
+
+    return { subtotal, tax, total, advancePayment };
+  };
+
+  const { subtotal, tax, total, advancePayment } = calculateTotals();
+
+  return (
+    <div className="bg-white text-black p-8 min-h-[600px]">
+      {/* Header */}
+      <div className="border-b-4 border-orange-500 pb-4 mb-6">
+        <div className="flex justify-between items-center">
+          <div className="shrink-0">
+            <img src="/logo/chemsrootlogo.png" alt="Company Logo" className="h-24 w-auto object-contain mb-2" />
+            <div className="text-xs text-gray-600 leading-relaxed">
+              <p>📞 {companySettings.companyPhone}</p>
+              <p>✉️ {companySettings.companyEmail}</p>
+            </div>
+          </div>
+          <div className="flex-1 text-center">
+            <h1 className="text-3xl font-bold text-gray-800">{companySettings.invoiceLabel}</h1>
+            <p className="text-gray-500 mt-1">{isDraft ? 'Draft Preview' : 'Preview'}</p>
+          </div>
+          <div className="text-right shrink-0 min-w-[180px]">
+            <p className="text-sm text-gray-500">Order Number</p>
+            <p className="text-lg font-semibold text-gray-700">
+              {quote?.quoteNumber || 'CR-XXXX-XXXX'}
+            </p>
+            <p className="text-sm text-gray-500 mt-2">
+              Date: {quote?.createdAt ? new Date(quote.createdAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString()}
+            </p>
+            <p className="text-xs text-gray-500">
+              Time: {quote?.createdAt 
+                ? new Date(quote.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+                : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
+              }
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* Client Details */}
+      <div className="grid grid-cols-2 gap-8 mb-8">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
+          <p className="text-lg font-semibold text-gray-800">{quote?.clientName || quote?.partyName || 'Party Name'}</p>
+          <p className="text-gray-600">{quote?.clientEmail || 'client@email.com'}</p>
+          <p className="text-gray-600">{quote?.clientPhone || '+91 XXXXX XXXXX'}</p>
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Marketed By</h3>
+          <p className="text-lg font-semibold text-gray-800">{quote?.marketedBy || 'Sales Person'}</p>
+        </div>
+      </div>
+
+      {/* Items Table */}
+      <div className="mb-8">
+        <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quote Items</h3>
+        <table className="w-full border-collapse">
+          <thead>
+            <tr className="bg-gray-100">
+              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
+              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Brand Name</th>
+              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Composition</th>
+              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Formulation</th>
+              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Packing</th>
+              <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-700">Qty</th>
+              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">MRP</th>
+              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Rate</th>
+              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
+            </tr>
+          </thead>
+          <tbody>
+            {items.map((item, index) => (
+              <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
+                <td className="border border-gray-300 px-3 py-2 text-sm">{index + 1}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.brandName || '-'}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">{item.composition || '-'}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm">{item.formulationType || '-'}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm">{item.packing || '-'}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.quantity || 0}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{(item.mrp || 0).toFixed(2)}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{(item.rate || 0).toFixed(2)}</td>
+                <td className="border border-gray-300 px-3 py-2 text-sm text-right font-medium">
+                  ₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {/* Totals */}
+      <div className="flex justify-end mb-8">
+        <div className="w-72">
+          <div className="flex justify-between py-2 border-b border-gray-200">
+            <span className="text-gray-600">Subtotal</span>
+            <span className="font-medium">₹{subtotal.toFixed(2)}</span>
+          </div>
+          {(quote?.cylinderCharges > 0) && (
+            <div className="flex justify-between py-2 border-b border-gray-200">
+              <span className="text-gray-600">Cylinder Charges</span>
+              <span className="font-medium">₹{parseFloat(quote.cylinderCharges).toFixed(2)}</span>
+            </div>
+          )}
+          {(quote?.inventoryCharges > 0) && (
+            <div className="flex justify-between py-2 border-b border-gray-200">
+              <span className="text-gray-600">Inventory Charges</span>
+              <span className="font-medium">₹{parseFloat(quote.inventoryCharges).toFixed(2)}</span>
+            </div>
+          )}
+
+          {tax > 0 && (
+            <div className="flex justify-between py-2 border-b border-gray-200">
+              <span className="text-gray-600">Tax ({quote?.taxPercent}%)</span>
+              <span className="font-medium">₹{tax.toFixed(2)}</span>
+            </div>
+          )}
+            <div className="flex justify-between py-3 border-t-2 border-gray-800 mt-2">
+              <span className="text-lg font-bold">Total</span>
+              <span className="text-lg font-bold text-orange-500">₹{total.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between py-2 border-t border-gray-200 mt-1 text-sm text-gray-600">
+               <span>Advance Payment (35%)</span>
+               <span className="font-medium">₹{advancePayment.toFixed(2)}</span>
+            </div>
+        </div>
+      </div>
+
+      {/* Terms & Account Details */}
+      <div className="grid grid-cols-2 gap-8">
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h3>
+          <p className="text-sm text-gray-600 whitespace-pre-wrap">{quote?.terms || 'Payment due within 30 days. All prices in INR.'}</p>
+        </div>
+        <div>
+          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Details</h3>
+          <p className="text-sm text-gray-600 whitespace-pre-wrap">{quote?.bankDetails || 'No account details specified'}</p>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default QuotePreview;

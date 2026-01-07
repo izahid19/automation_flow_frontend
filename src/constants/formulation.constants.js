@@ -1,0 +1,29 @@
+// Packing options for different formulation types
+export const PACKING_OPTIONS = {
+  'Tablet': ['10x10', '10x1x10', '10x15', '20x10', '10x3', '10x5', '10x6', '10x7'],
+  'Capsule': ['10x10', '10x1x10', '10x15', '20x10', '10x3', '10x5', '10x6', '10x7'],
+  'Soft Gelatine': ['10x10', '10x1x10', '10x15', '20x10', '10x3', '10x5', '10x6', '10x7'],
+  'Syrup': ['200ml', '170ml', '150ml', '100ml', '30ml', '15ml', '10ml', '5ml', '4ml', '2ml'],
+  'Ointment/Cream': ['5gm', '10gm', '15gm', '20gm', '30gm', '50gm'],
+  'Sachet': ['10x1gm', '20x1gm', '25x1gm', '30x1gm', '50x1gm', '10x3gm', '20x3gm', '10x5gm', '20x5gm', '10x7.5gm', '20x7.5gm', '10x1x8gm', '20x1x8gm'],
+};
+
+// Packaging type options for different formulation types
+export const PACKAGING_OPTIONS = {
+  'Tablet': ['Alu Alu', 'Blister', 'Aluminium'],
+  'Capsule': ['Alu Alu', 'Blister', 'Aluminium'],
+  'Soft Gelatine': ['Alu Alu', 'Blister', 'Aluminium'],
+  'Syrup': ['Only label', 'Sticker label', 'Metalic label', 'With carton', 'With metalic carton'],
+  'Ointment/Cream': ['With carton', 'With metalic carton', 'With flap'],
+  'Sachet': ['Only label', 'Sticker label', 'Metalic label', 'With carton', 'With metalic carton'],
+};
+
+// All available formulation types
+export const FORMULATION_TYPES = [
+  ...Object.keys(PACKING_OPTIONS),
+  'Injection',
+  'I.V/Fluid'
+];
+
+// Formulations that don't require packing field
+export const NO_PACKING_FORMULATIONS = ['Injection', 'I.V/Fluid'];

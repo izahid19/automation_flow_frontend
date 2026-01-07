@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { quoteAPI } from '../services/api';
+import { quoteAPI, settingsAPI } from '../services/api';
 import { 
   ArrowLeft, 
   Download, 
@@ -19,6 +19,7 @@ import {
   EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import QuotePreview from '@/components/QuotePreview';
 
 const QuoteDetail = () => {
   const { id } = useParams();
@@ -30,10 +31,31 @@ const QuoteDetail = () => {
   const [comments, setComments] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const previewRef = useRef(null);
+  const [companySettings, setCompanySettings] = useState({
+    companyPhone: '+917696275527',
+    companyEmail: 'user@gmail.com',
+    invoiceLabel: 'QUOTATION'
+  });
 
   useEffect(() => {
     fetchQuote();
+    fetchCompanySettings();
   }, [id]);
+
+  const fetchCompanySettings = async () => {
+    try {
+      const response = await settingsAPI.getAll();
+      if (response.data.success) {
+        setCompanySettings({
+          companyPhone: response.data.data.companyPhone || '+917696275527',
+          companyEmail: response.data.data.companyEmail || 'user@gmail.com',
+          invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION'
+        });
+      }
+    } catch (error) {
+      console.error('Failed to fetch company settings:', error);
+    }
+  };
 
   const fetchQuote = async () => {
     try {
@@ -443,121 +465,15 @@ const QuoteDetail = () => {
           </h2>
         </div>
         
-        <div className="bg-white text-black p-8 min-h-[600px]">
-            {/* Header */}
-            <div className="border-b-4 border-orange-500 pb-4 mb-6">
-              <div className="flex justify-between items-start">
-                <div>
-                  <h1 className="text-3xl font-bold text-gray-800">QUOTATION</h1>
-                  <p className="text-gray-500 mt-1">Draft Preview</p>
-                </div>
-                <div className="text-right">
-                  <p className="text-sm text-gray-500">Quote Number</p>
-                  <p className="text-lg font-semibold text-gray-700">{quote.quoteNumber}</p>
-                  <p className="text-sm text-gray-500 mt-2">Date: {new Date(quote.createdAt).toLocaleDateString('en-IN')}</p>
-                </div>
-              </div>
-            </div>
+        <QuotePreview quote={quote} isDraft={false} />
 
-            {/* Client Details */}
-            <div className="grid grid-cols-2 gap-8 mb-8">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Bill To</h3>
-                <p className="text-lg font-semibold text-gray-800">{quote.clientName}</p>
-                <p className="text-gray-600">{quote.clientEmail}</p>
-                <p className="text-gray-600">{quote.clientPhone}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Marketed By</h3>
-                <p className="text-lg font-semibold text-gray-800">{quote.marketedBy || 'N/A'}</p>
-              </div>
-            </div>
 
-            {/* Items Table */}
-            <div className="mb-8">
-              <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quote Items</h3>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr className="bg-gray-100">
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Brand Name</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Composition</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Formulation</th>
-                    <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Packing</th>
-                    <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-700">Qty</th>
-                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">MRP</th>
-                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Rate</th>
-                    <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quote.items?.map((item, index) => (
-                    <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                      <td className="border border-gray-300 px-3 py-2 text-sm">{index + 1}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.brandName || '-'}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">{item.composition || '-'}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm">{item.formulationType || '-'}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm">{item.packing || '-'}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.quantity}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{item.mrp?.toFixed(2)}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{item.rate?.toFixed(2)}</td>
-                      <td className="border border-gray-300 px-3 py-2 text-sm text-right font-medium">₹{(item.quantity * item.rate)?.toFixed(2)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
 
-            {/* Totals */}
-            <div className="flex justify-end mb-8">
-              <div className="w-72">
-                <div className="flex justify-between py-2 border-b border-gray-200">
-                  <span className="text-gray-600">Subtotal</span>
-                  <span className="font-medium">₹{quote.subtotal?.toFixed(2)}</span>
-                </div>
-                {(quote.cylinderCharges || 0) > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Cylinder Charges</span>
-                    <span>₹{quote.cylinderCharges?.toFixed(2)}</span>
-                  </div>
-                )}
-                {(quote.inventoryCharges || 0) > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Inventory Charges</span>
-                    <span>₹{quote.inventoryCharges?.toFixed(2)}</span>
-                  </div>
-                )}
-                {quote.discount > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200 text-green-600">
-                    <span>Discount ({quote.discountPercent}%)</span>
-                    <span>-₹{quote.discount?.toFixed(2)}</span>
-                  </div>
-                )}
-                {quote.tax > 0 && (
-                  <div className="flex justify-between py-2 border-b border-gray-200">
-                    <span className="text-gray-600">Tax ({quote.taxPercent}%)</span>
-                    <span>₹{quote.tax?.toFixed(2)}</span>
-                  </div>
-                )}
-                <div className="flex justify-between py-3 text-lg font-bold">
-                  <span>Total</span>
-                  <span className="text-orange-600">₹{quote.totalAmount?.toFixed(2)}</span>
-                </div>
-              </div>
-            </div>
 
-            {/* Terms & Bank Details */}
-            <div className="grid grid-cols-2 gap-8 pt-6 border-t border-gray-200">
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h3>
-                <p className="text-sm text-gray-600 whitespace-pre-line">{quote.terms || 'No terms specified'}</p>
-              </div>
-              <div>
-                <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Account Details</h3>
-                <p className="text-sm text-gray-600 whitespace-pre-line">{quote.bankDetails || 'No account details specified'}</p>
-              </div>
-            </div>
-          </div>
+
+
+
+
         </div>
     </div>
   );

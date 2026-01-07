@@ -15,6 +15,7 @@ import QuoteForm from './pages/QuoteForm';
 import QuoteDetail from './pages/QuoteDetail';
 import Manufacturers from './pages/Manufacturers';
 import Users from './pages/Users';
+import InvoiceLabel from './pages/InvoiceLabel';
 import Settings from './pages/Settings';
 
 // Protected Route Component
@@ -128,6 +129,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <Users />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="invoice-label"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <InvoiceLabel />
                 </ProtectedRoute>
               }
             />
