@@ -120,6 +120,7 @@ function App() {
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="quotes" element={<Quotes />} />
             <Route path="quotes/new" element={<QuoteForm />} />
+            <Route path="quotes/:id/edit" element={<QuoteForm />} />
             <Route path="quotes/:id" element={<QuoteDetail />} />
             <Route path="approvals" element={<Quotes />} />
             <Route path="purchase-orders" element={<Quotes />} />

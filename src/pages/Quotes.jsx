@@ -16,7 +16,8 @@ import {
   Loader2,
   Eye,
   Trash2,
-  Download
+  Download,
+  Edit
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -219,7 +220,7 @@ const Quotes = () => {
                     <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(quote.createdAt).toLocaleDateString()}
+                      {new Date(quote.createdAt).toLocaleDateString()} {new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
@@ -229,6 +230,13 @@ const Quotes = () => {
                           onClick={() => navigate(`/quotes/${quote._id}`)}
                         >
                           <Eye size={16} />
+                        </Button>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/quotes/${quote._id}/edit`)}
+                        >
+                          <Edit size={16} />
                         </Button>
                         <Button
                           variant="ghost"

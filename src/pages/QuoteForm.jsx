@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useParams } from 'react-router-dom';
 import { quoteAPI, settingsAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -38,9 +38,33 @@ import {
 } from '@/components/quote';
 
 const QuoteForm = () => {
+  // Helper function to only allow numeric input in text fields
+  const handleNumericKeyDown = (e) => {
+    // Allow: backspace, delete, tab, escape, enter, decimal point
+    if (
+      [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+      // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+      (e.keyCode === 65 && e.ctrlKey === true) ||
+      (e.keyCode === 67 && e.ctrlKey === true) ||
+      (e.keyCode === 86 && e.ctrlKey === true) ||
+      (e.keyCode === 88 && e.ctrlKey === true) ||
+      // Allow: home, end, left, right
+      (e.keyCode >= 35 && e.keyCode <= 39)
+    ) {
+      return;
+    }
+    // Ensure that it is a number and stop the keypress
+    if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+      e.preventDefault();
+    }
+  };
+
   const { user } = useAuth();
   const navigate = useNavigate();
+  const { id } = useParams();
+  const isEditMode = !!id;
   const [loading, setLoading] = useState(false);
+  const [loadingQuote, setLoadingQuote] = useState(isEditMode);
   const [errors, setErrors] = useState({});
   const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState({
@@ -52,6 +76,7 @@ const QuoteForm = () => {
     items: [{ ...DEFAULT_ITEM }],
     discountPercent: 0,
     taxPercent: 0,
+    taxPercentOnCharges: 0,
     cylinderCharges: 0,
     inventoryCharges: 0,
     terms: 'Payment due within 30 days. All prices in INR.',
@@ -63,6 +88,43 @@ const QuoteForm = () => {
     invoiceLabel: 'QUOTATION'
   });
 
+  // Fetch quote data if in edit mode
+  useEffect(() => {
+    const fetchQuote = async () => {
+      if (!isEditMode) return;
+      
+      try {
+        setLoadingQuote(true);
+        const response = await quoteAPI.getOne(id);
+        const quote = response.data.data;
+        
+        // Map quote data to form data structure
+        setFormData({
+          partyName: quote.clientName || '',
+          marketedBy: quote.marketedBy || '',
+          clientEmail: quote.clientEmail || '',
+          clientPhone: quote.clientPhone || '',
+          clientAddress: quote.clientAddress || '',
+          items: quote.items && quote.items.length > 0 ? quote.items : [{ ...DEFAULT_ITEM }],
+          discountPercent: quote.discountPercent || 0,
+          taxPercent: quote.taxPercent || 0,
+          taxPercentOnCharges: quote.taxPercentOnCharges || 0,
+          cylinderCharges: quote.cylinderCharges || 0,
+          inventoryCharges: quote.inventoryCharges || 0,
+          terms: quote.terms || 'Payment due within 30 days. All prices in INR.',
+          bankDetails: quote.bankDetails || '',
+        });
+      } catch (error) {
+        toast.error('Failed to load quote');
+        navigate('/quotes');
+      } finally {
+        setLoadingQuote(false);
+      }
+    };
+    
+    fetchQuote();
+  }, [id, isEditMode, navigate]);
+
   // Fetch default settings on component mount
   useEffect(() => {
     const fetchSettings = async () => {
@@ -72,7 +134,7 @@ const QuoteForm = () => {
           setFormData(prev => ({
             ...prev,
             terms: response.data.data.terms || prev.terms,
-            bankDetails: response.data.data.bankDetails || '',
+            bankDetails: response.data.data.bankDetails || prev.bankDetails,
           }));
           setCompanySettings({
             companyPhone: response.data.data.companyPhone || '+917696275527',
@@ -183,17 +245,33 @@ const QuoteForm = () => {
     const subtotal = formData.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
     const cylinderCharges = parseFloat(formData.cylinderCharges) || 0;
     const inventoryCharges = parseFloat(formData.inventoryCharges) || 0;
+    const taxPercent = parseFloat(formData.taxPercent) || 0;
+    const taxPercentOnCharges = parseFloat(formData.taxPercentOnCharges) || 0;
     
-    const taxableAmount = subtotal + cylinderCharges + inventoryCharges;
-    const tax = (taxableAmount * formData.taxPercent) / 100;
+    // Tax on subtotal only
+    const taxOnSubtotal = (subtotal * taxPercent) / 100;
     
-    // Total includes taxable amount + tax
-    const total = taxableAmount + tax;
+    // Tax on cylinder charges and inventory charges (using separate tax percent)
+    const chargesTotal = cylinderCharges + inventoryCharges;
+    const taxOnCharges = (chargesTotal * taxPercentOnCharges) / 100;
+    
+    // Total tax
+    const totalTax = taxOnSubtotal + taxOnCharges;
+    
+    // Total includes subtotal + charges + total tax
+    const total = subtotal + cylinderCharges + inventoryCharges + totalTax;
     
     // Advance Payment is 35% of Total
     const advancePayment = total * 0.35;
 
-    return { subtotal, tax, total, advancePayment };
+    return { 
+      subtotal, 
+      taxOnSubtotal, 
+      taxOnCharges, 
+      totalTax, 
+      total, 
+      advancePayment 
+    };
   };
 
   const handleSubmit = async (submitForApproval = false) => {
@@ -209,25 +287,48 @@ const QuoteForm = () => {
         ...formData,
         clientName: formData.partyName,
       };
-      const response = await quoteAPI.create(submitData);
-      const quoteId = response.data.data._id;
-
-      if (submitForApproval) {
-        await quoteAPI.submit(quoteId);
-        toast.success('Quote created and submitted for approval!');
+      
+      let quoteId = id;
+      
+      if (isEditMode) {
+        // Update existing quote
+        await quoteAPI.update(id, submitData);
+        toast.success('Quote updated successfully!');
+        
+        if (submitForApproval) {
+          await quoteAPI.submit(quoteId);
+          toast.success('Quote submitted for approval!');
+        }
       } else {
-        toast.success('Quote saved as draft!');
+        // Create new quote
+        const response = await quoteAPI.create(submitData);
+        quoteId = response.data.data._id;
+
+        if (submitForApproval) {
+          await quoteAPI.submit(quoteId);
+          toast.success('Quote created and submitted for approval!');
+        } else {
+          toast.success('Quote saved as draft!');
+        }
       }
 
       navigate(`/quotes/${quoteId}`);
     } catch (error) {
-      toast.error(error.response?.data?.message || 'Failed to save quote');
+      toast.error(error.response?.data?.message || `Failed to ${isEditMode ? 'update' : 'save'} quote`);
     } finally {
       setLoading(false);
     }
   };
 
-  const { subtotal, tax, total, advancePayment } = calculateTotals();
+  const { subtotal, taxOnSubtotal, taxOnCharges, totalTax, total, advancePayment } = calculateTotals();
+
+  if (loadingQuote) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -238,8 +339,8 @@ const QuoteForm = () => {
             <ArrowLeft size={20} />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Create New Quote</h1>
-            <p className="text-muted-foreground">Fill in the details to create a quotation</p>
+            <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Quote' : 'Create New Quote'}</h1>
+            <p className="text-muted-foreground">{isEditMode ? 'Update the quote details' : 'Fill in the details to create a quotation'}</p>
           </div>
         </div>
         <Button
@@ -527,10 +628,12 @@ const QuoteForm = () => {
                           </Label>
                           <div className="relative">
                             <Input
-                              type="number"
+                              type="text"
+                              inputMode="numeric"
+                              pattern="[0-9]*"
                               value={item.quantity}
                               onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
-                              min="1"
+                              onKeyDown={handleNumericKeyDown}
                               className="h-12 text-lg font-medium pl-3"
                             />
                             <span className="absolute right-3 top-3.5 text-xs text-muted-foreground">Units</span>
@@ -543,10 +646,12 @@ const QuoteForm = () => {
                             MRP (₹) <span className="text-red-500">*</span>
                           </Label>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={item.mrp}
                             onChange={(e) => handleItemChange(index, 'mrp', e.target.value)}
-                            min="0"
+                            onKeyDown={handleNumericKeyDown}
                             className="h-12 text-lg pl-3"
                           />
                         </div>
@@ -557,10 +662,12 @@ const QuoteForm = () => {
                             Our Rate (₹) <span className="text-red-500">*</span>
                           </Label>
                           <Input
-                            type="number"
+                            type="text"
+                            inputMode="numeric"
+                            pattern="[0-9]*"
                             value={item.rate}
                             onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
-                            min="0"
+                            onKeyDown={handleNumericKeyDown}
                             className="h-12 text-xl font-bold text-primary pl-3 border-primary/20 focus:border-primary"
                           />
                         </div>
@@ -621,15 +728,38 @@ const QuoteForm = () => {
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
+                  <Label htmlFor="taxPercent" className="text-muted-foreground">Tax (%)</Label>
+                  <Input
+                    id="taxPercent"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    name="taxPercent"
+                    value={formData.taxPercent}
+                    onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
+                    className="w-20 text-right"
+                  />
+                </div>
+                {taxOnSubtotal > 0 && (
+                  <div className="flex justify-between">
+                    <span className="text-muted-foreground">Tax on Subtotal</span>
+                    <span>₹{taxOnSubtotal.toFixed(2)}</span>
+                  </div>
+                )}
+
+                <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="cylinderCharges" className="text-muted-foreground">Cylinder Charges</Label>
                   <Input
                     id="cylinderCharges"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     name="cylinderCharges"
                     value={formData.cylinderCharges}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-24 text-right"
-                    min="0"
                   />
                 </div>
 
@@ -637,34 +767,43 @@ const QuoteForm = () => {
                   <Label htmlFor="inventoryCharges" className="text-muted-foreground">Inventory Charges</Label>
                   <Input
                     id="inventoryCharges"
-                    type="number"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     name="inventoryCharges"
                     value={formData.inventoryCharges}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-24 text-right"
-                    min="0"
                   />
                 </div>
-
-
 
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="taxPercent" className="text-muted-foreground">Tax (%)</Label>
+                  <Label htmlFor="taxPercentOnCharges" className="text-muted-foreground">Tax on Charges (%)</Label>
                   <Input
-                    id="taxPercent"
-                    type="number"
-                    name="taxPercent"
-                    value={formData.taxPercent}
+                    id="taxPercentOnCharges"
+                    type="text"
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    name="taxPercentOnCharges"
+                    value={formData.taxPercentOnCharges}
                     onChange={handleChange}
+                    onKeyDown={handleNumericKeyDown}
                     className="w-20 text-right"
-                    min="0"
-                    max="100"
                   />
                 </div>
-                {tax > 0 && (
+
+                {taxOnCharges > 0 && (
                   <div className="flex justify-between">
-                    <span className="text-muted-foreground">Tax</span>
-                    <span>₹{tax.toFixed(2)}</span>
+                    <span className="text-muted-foreground">Tax on Cylinder & Inventory Charges</span>
+                    <span>₹{taxOnCharges.toFixed(2)}</span>
+                  </div>
+                )}
+
+                {totalTax > 0 && (
+                  <div className="flex justify-between font-semibold">
+                    <span className="text-muted-foreground">Total Tax</span>
+                    <span>₹{totalTax.toFixed(2)}</span>
                   </div>
                 )}
 

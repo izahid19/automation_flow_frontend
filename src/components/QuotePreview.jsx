@@ -32,20 +32,29 @@ const QuotePreview = ({ quote, isDraft = false }) => {
     const subtotal = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
     const cylinderCharges = parseFloat(quote?.cylinderCharges) || 0;
     const inventoryCharges = parseFloat(quote?.inventoryCharges) || 0;
+    const taxPercent = parseFloat(quote?.taxPercent) || 0;
+    const taxPercentOnCharges = parseFloat(quote?.taxPercentOnCharges) || 0;
     
-    const taxableAmount = subtotal + cylinderCharges + inventoryCharges;
-    const tax = (taxableAmount * (quote?.taxPercent || 0)) / 100;
+    // Tax on subtotal only
+    const taxOnSubtotal = (subtotal * taxPercent) / 100;
     
-    // Total includes taxable amount + tax
-    const total = taxableAmount + tax;
+    // Tax on cylinder charges and inventory charges (using separate tax percent)
+    const chargesTotal = cylinderCharges + inventoryCharges;
+    const taxOnCharges = (chargesTotal * taxPercentOnCharges) / 100;
+    
+    // Total tax
+    const totalTax = taxOnSubtotal + taxOnCharges;
+    
+    // Total includes subtotal + charges + total tax
+    const total = subtotal + cylinderCharges + inventoryCharges + totalTax;
     
     // Advance Payment is 35% of Total
     const advancePayment = total * 0.35;
 
-    return { subtotal, tax, total, advancePayment };
+    return { subtotal, taxOnSubtotal, taxOnCharges, totalTax, total, advancePayment };
   };
 
-  const { subtotal, tax, total, advancePayment } = calculateTotals();
+  const { subtotal, taxOnSubtotal, taxOnCharges, totalTax, total, advancePayment } = calculateTotals();
 
   return (
     <div className="bg-white text-black p-8 min-h-[600px]">
@@ -139,6 +148,12 @@ const QuotePreview = ({ quote, isDraft = false }) => {
             <span className="text-gray-600">Subtotal</span>
             <span className="font-medium">₹{subtotal.toFixed(2)}</span>
           </div>
+          {taxOnSubtotal > 0 && (
+            <div className="flex justify-between py-2 border-b border-gray-200">
+              <span className="text-gray-600">Tax on Subtotal ({quote?.taxPercent}%)</span>
+              <span className="font-medium">₹{taxOnSubtotal.toFixed(2)}</span>
+            </div>
+          )}
           {(quote?.cylinderCharges > 0) && (
             <div className="flex justify-between py-2 border-b border-gray-200">
               <span className="text-gray-600">Cylinder Charges</span>
@@ -151,11 +166,16 @@ const QuotePreview = ({ quote, isDraft = false }) => {
               <span className="font-medium">₹{parseFloat(quote.inventoryCharges).toFixed(2)}</span>
             </div>
           )}
-
-          {tax > 0 && (
+          {taxOnCharges > 0 && (
             <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-gray-600">Tax ({quote?.taxPercent}%)</span>
-              <span className="font-medium">₹{tax.toFixed(2)}</span>
+              <span className="text-gray-600">Tax on Cylinder & Inventory Charges ({quote?.taxPercentOnCharges || quote?.taxPercent}%)</span>
+              <span className="font-medium">₹{taxOnCharges.toFixed(2)}</span>
+            </div>
+          )}
+          {totalTax > 0 && (
+            <div className="flex justify-between py-2 border-b border-gray-200 font-semibold">
+              <span className="text-gray-600">Total Tax</span>
+              <span className="font-medium">₹{totalTax.toFixed(2)}</span>
             </div>
           )}
             <div className="flex justify-between py-3 border-t-2 border-gray-800 mt-2">

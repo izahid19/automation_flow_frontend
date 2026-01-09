@@ -16,7 +16,8 @@ import {
   Calendar,
   FileText,
   Eye,
-  EyeOff
+  EyeOff,
+  Edit
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuotePreview from '@/components/QuotePreview';
@@ -211,6 +212,15 @@ const QuoteDetail = () => {
           </div>
         </div>
         <div className="flex gap-2">
+          {canSubmit && (
+            <button 
+              onClick={() => navigate(`/quotes/${id}/edit`)} 
+              className="btn btn-secondary"
+            >
+              <Edit size={18} />
+              Edit
+            </button>
+          )}
           <button 
             onClick={() => setShowPreview(!showPreview)} 
             className={`btn ${showPreview ? 'btn-primary' : 'btn-secondary'}`}
@@ -367,28 +377,56 @@ const QuoteDetail = () => {
                 <span className="text-[var(--text-secondary)]">Subtotal</span>
                 <span>₹{quote.subtotal?.toFixed(2)}</span>
               </div>
-              {(quote.cylinderCharges || 0) > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Cylinder Charges</span>
-                  <span>₹{quote.cylinderCharges?.toFixed(2)}</span>
-                </div>
-              )}
-              {(quote.inventoryCharges || 0) > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Inventory Charges</span>
-                  <span>₹{quote.inventoryCharges?.toFixed(2)}</span>
-                </div>
-              )}
+              {(() => {
+                const subtotal = quote.subtotal || 0;
+                const cylinderCharges = parseFloat(quote.cylinderCharges) || 0;
+                const inventoryCharges = parseFloat(quote.inventoryCharges) || 0;
+                const taxPercent = parseFloat(quote.taxPercent) || 0;
+                const taxPercentOnCharges = parseFloat(quote.taxPercentOnCharges) || 0;
+                const taxOnSubtotal = (subtotal * taxPercent) / 100;
+                const chargesTotal = cylinderCharges + inventoryCharges;
+                const taxOnCharges = (chargesTotal * taxPercentOnCharges) / 100;
+                const totalTax = taxOnSubtotal + taxOnCharges;
+                
+                return (
+                  <>
+                    {taxOnSubtotal > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-secondary)]">Tax on Subtotal ({taxPercent}%)</span>
+                        <span>₹{taxOnSubtotal.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {(cylinderCharges || 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-secondary)]">Cylinder Charges</span>
+                        <span>₹{quote.cylinderCharges?.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {(inventoryCharges || 0) > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-secondary)]">Inventory Charges</span>
+                        <span>₹{quote.inventoryCharges?.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {taxOnCharges > 0 && (
+                      <div className="flex justify-between">
+                        <span className="text-[var(--text-secondary)]">Tax on Cylinder & Inventory Charges ({taxPercentOnCharges || taxPercent}%)</span>
+                        <span>₹{taxOnCharges.toFixed(2)}</span>
+                      </div>
+                    )}
+                    {totalTax > 0 && (
+                      <div className="flex justify-between font-semibold">
+                        <span className="text-[var(--text-secondary)]">Total Tax</span>
+                        <span>₹{totalTax.toFixed(2)}</span>
+                      </div>
+                    )}
+                  </>
+                );
+              })()}
               {quote.discount > 0 && (
                 <div className="flex justify-between text-green-500">
                   <span>Discount ({quote.discountPercent}%)</span>
                   <span>-₹{quote.discount?.toFixed(2)}</span>
-                </div>
-              )}
-              {quote.tax > 0 && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--text-secondary)]">Tax ({quote.taxPercent}%)</span>
-                  <span>₹{quote.tax?.toFixed(2)}</span>
                 </div>
               )}
               <hr className="border-[var(--border)]" />
@@ -461,7 +499,7 @@ const QuoteDetail = () => {
         <div className="p-4 bg-[var(--primary)]/10 border-b border-[var(--border)]">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Eye size={20} />
-            Quote Preview (PDF via PNG)
+            Quote Preview
           </h2>
         </div>
         

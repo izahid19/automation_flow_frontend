@@ -4,6 +4,27 @@ import { Label } from '@/components/ui/label';
 import { Separator } from '@/components/ui/separator';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 
+// Helper function to only allow numeric input in text fields
+const handleNumericKeyDown = (e) => {
+  // Allow: backspace, delete, tab, escape, enter, decimal point
+  if (
+    [46, 8, 9, 27, 13, 110, 190].indexOf(e.keyCode) !== -1 ||
+    // Allow: Ctrl+A, Ctrl+C, Ctrl+V, Ctrl+X
+    (e.keyCode === 65 && e.ctrlKey === true) ||
+    (e.keyCode === 67 && e.ctrlKey === true) ||
+    (e.keyCode === 86 && e.ctrlKey === true) ||
+    (e.keyCode === 88 && e.ctrlKey === true) ||
+    // Allow: home, end, left, right
+    (e.keyCode >= 35 && e.keyCode <= 39)
+  ) {
+    return;
+  }
+  // Ensure that it is a number and stop the keypress
+  if ((e.shiftKey || (e.keyCode < 48 || e.keyCode > 57)) && (e.keyCode < 96 || e.keyCode > 105)) {
+    e.preventDefault();
+  }
+};
+
 /**
  * Quote Summary Sidebar
  * Shows subtotal, charges, discounts, tax, and total
@@ -39,12 +60,14 @@ export const QuoteSummaryCard = ({
             </Label>
             <Input
               id="cylinderCharges"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="cylinderCharges"
               value={formData.cylinderCharges}
               onChange={onChange}
+              onKeyDown={handleNumericKeyDown}
               className="w-24 text-right"
-              min="0"
             />
           </div>
 
@@ -55,12 +78,14 @@ export const QuoteSummaryCard = ({
             </Label>
             <Input
               id="inventoryCharges"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="inventoryCharges"
               value={formData.inventoryCharges}
               onChange={onChange}
+              onKeyDown={handleNumericKeyDown}
               className="w-24 text-right"
-              min="0"
             />
           </div>
 
@@ -71,13 +96,14 @@ export const QuoteSummaryCard = ({
             </Label>
             <Input
               id="discountPercent"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="discountPercent"
               value={formData.discountPercent}
               onChange={onChange}
+              onKeyDown={handleNumericKeyDown}
               className="w-20 text-right"
-              min="0"
-              max="100"
             />
           </div>
           {discount > 0 && (
@@ -94,13 +120,14 @@ export const QuoteSummaryCard = ({
             </Label>
             <Input
               id="taxPercent"
-              type="number"
+              type="text"
+              inputMode="numeric"
+              pattern="[0-9]*"
               name="taxPercent"
               value={formData.taxPercent}
               onChange={onChange}
+              onKeyDown={handleNumericKeyDown}
               className="w-20 text-right"
-              min="0"
-              max="100"
             />
           </div>
           {tax > 0 && (
