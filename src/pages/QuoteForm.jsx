@@ -25,6 +25,7 @@ import QuotePreview from '@/components/QuotePreview';
 import { 
   PACKING_OPTIONS, 
   PACKAGING_OPTIONS, 
+  CARTON_OPTIONS,
   FORMULATION_TYPES 
 } from '@/constants/formulation.constants';
 import { DEFAULT_ITEM } from '@/constants/quote.constants';
@@ -76,7 +77,7 @@ const QuoteForm = () => {
     items: [{ ...DEFAULT_ITEM }],
     discountPercent: 0,
     taxPercent: 0,
-    taxPercentOnCharges: 0,
+    taxPercentOnCharges: 18,
     cylinderCharges: 0,
     inventoryCharges: 0,
     terms: 'Payment due within 30 days. All prices in INR.',
@@ -108,7 +109,7 @@ const QuoteForm = () => {
           items: quote.items && quote.items.length > 0 ? quote.items : [{ ...DEFAULT_ITEM }],
           discountPercent: quote.discountPercent || 0,
           taxPercent: quote.taxPercent || 0,
-          taxPercentOnCharges: quote.taxPercentOnCharges || 0,
+          taxPercentOnCharges: 18, // Fixed at 18%, cannot be changed
           cylinderCharges: quote.cylinderCharges || 0,
           inventoryCharges: quote.inventoryCharges || 0,
           terms: quote.terms || 'Payment due within 30 days. All prices in INR.',
@@ -215,6 +216,8 @@ const QuoteForm = () => {
     if (field === 'formulationType') {
       newItems[index].packing = '';
       newItems[index].packagingType = '';
+      newItems[index].cartonPacking = '';
+      newItems[index].customCartonPacking = '';
     }
 
     setFormData({ ...formData, items: newItems });
@@ -246,7 +249,7 @@ const QuoteForm = () => {
     const cylinderCharges = parseFloat(formData.cylinderCharges) || 0;
     const inventoryCharges = parseFloat(formData.inventoryCharges) || 0;
     const taxPercent = parseFloat(formData.taxPercent) || 0;
-    const taxPercentOnCharges = parseFloat(formData.taxPercentOnCharges) || 0;
+    const taxPercentOnCharges = 18; // Fixed at 18%
     
     // Tax on subtotal only
     const taxOnSubtotal = (subtotal * taxPercent) / 100;
@@ -548,6 +551,21 @@ const QuoteForm = () => {
                             </SelectContent>
                           </Select>
                         </div>
+
+                        {/* Color of Soft Gelatin - Only for Soft Gelatine formulation */}
+                        {item.formulationType === 'Soft Gelatine' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Color of Soft Gelatin
+                            </Label>
+                            <Input
+                              value={item.softGelatinColor || ''}
+                              onChange={(e) => handleItemChange(index, 'softGelatinColor', e.target.value)}
+                              placeholder="Enter color (optional)"
+                              className="h-10"
+                            />
+                          </div>
+                        )}
                       </div>
 
                       {/* Technical Specs Section */}
@@ -569,7 +587,7 @@ const QuoteForm = () => {
                         {showPackingField && (
                           <div className="space-y-2">
                             <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                              {item.formulationType === 'Syrup' ? 'Unit Pack' : 'Box Packing'} <span className="text-red-500">*</span>
+                              {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Unit Pack' : 'Box Packing'} <span className="text-red-500">*</span>
                             </Label>
                              <Select
                                 value={item.packing}
@@ -579,18 +597,26 @@ const QuoteForm = () => {
                                     <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
-                                    {packingOptions.map(opt => (
+                                    {packingOptions.concat(['Custom']).map(opt => (
                                         <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                                     ))}
                                 </SelectContent>
                             </Select>
+                            {item.packing === 'Custom' && (
+                              <Input
+                                value={item.customPacking || ''}
+                                onChange={(e) => handleItemChange(index, 'customPacking', e.target.value)}
+                                placeholder="Enter custom packing"
+                                className="h-10 mt-2"
+                              />
+                            )}
                           </div>
                         )}
 
                         {/* Packaging Type - Spanning remaining */}
                         <div className={`space-y-2 ${!showPackingField ? 'md:col-span-2' : ''}`}>
                           <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                            Packaging Type <span className="text-red-500">*</span>
+                            {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'} <span className="text-red-500">*</span>
                           </Label>
                           {packagingOptions ? (
                                <Select
@@ -601,7 +627,7 @@ const QuoteForm = () => {
                                       <SelectValue placeholder="Select Type" />
                                   </SelectTrigger>
                                   <SelectContent>
-                                      {packagingOptions.map(opt => (
+                                      {packagingOptions.concat(['Custom']).map(opt => (
                                           <SelectItem key={opt} value={opt}>{opt}</SelectItem>
                                       ))}
                                   </SelectContent>
@@ -614,7 +640,60 @@ const QuoteForm = () => {
                                   className="h-10"
                               />
                           )}
+                          {item.packagingType === 'Custom' && (
+                            <Input
+                              value={item.customPackagingType || ''}
+                              onChange={(e) => handleItemChange(index, 'customPackagingType', e.target.value)}
+                              placeholder="Enter custom packaging type"
+                              className="h-10 mt-2"
+                            />
+                          )}
                         </div>
+
+                        {/* Carton Field - Only for Syrup/Suspension and Dry Syrup */}
+                        {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) && (
+                          <div className="space-y-2">
+                             <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Carton
+                            </Label>
+                            <Select
+                                value={item.cartonPacking}
+                                onValueChange={(value) => handleItemChange(index, 'cartonPacking', value)}
+                            >
+                                <SelectTrigger className="w-full h-10">
+                                    <SelectValue placeholder="Select Carton" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {(CARTON_OPTIONS[item.formulationType] || []).concat(['Custom']).map(opt => (
+                                        <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            {item.cartonPacking === 'Custom' && (
+                              <Input
+                                value={item.customCartonPacking || ''}
+                                onChange={(e) => handleItemChange(index, 'customCartonPacking', e.target.value)}
+                                placeholder="Enter custom carton"
+                                className="h-10 mt-2"
+                              />
+                            )}
+                          </div>
+                        )}
+
+
+                        {/* Specification - Optional */}
+                        <div className="md:col-span-2 space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Specification
+                          </Label>
+                          <Input
+                            value={item.specification || ''}
+                            onChange={(e) => handleItemChange(index, 'specification', e.target.value)}
+                            placeholder="Enter specification (optional)"
+                            className="h-10"
+                          />
+                        </div>
+
                       </div>
 
                       <Separator className="bg-border/40" />
@@ -779,18 +858,8 @@ const QuoteForm = () => {
                 </div>
 
                 <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="taxPercentOnCharges" className="text-muted-foreground">Tax on Charges (%)</Label>
-                  <Input
-                    id="taxPercentOnCharges"
-                    type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    name="taxPercentOnCharges"
-                    value={formData.taxPercentOnCharges}
-                    onChange={handleChange}
-                    onKeyDown={handleNumericKeyDown}
-                    className="w-20 text-right"
-                  />
+                  <Label className="text-muted-foreground">Tax on Charges (%)</Label>
+                  <span className="w-20 text-right font-medium">18%</span>
                 </div>
 
                 {taxOnCharges > 0 && (

@@ -178,7 +178,7 @@ const Users = () => {
                       </span>
                     </td>
                     <td className="text-[var(--text-secondary)]">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString() : 'Never'}
+                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-GB') : 'Never'}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">

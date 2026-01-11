@@ -220,7 +220,7 @@ const Quotes = () => {
                     <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(quote.createdAt).toLocaleDateString()} {new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                      {new Date(quote.createdAt).toLocaleDateString('en-GB')} {new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">

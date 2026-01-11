@@ -227,7 +227,7 @@ const Dashboard = () => {
                     <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(quote.createdAt).toLocaleDateString()}
+                      {new Date(quote.createdAt).toLocaleDateString('en-GB')}
                     </TableCell>
                   </TableRow>
                 ))}

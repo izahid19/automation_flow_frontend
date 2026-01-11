@@ -5,7 +5,8 @@ const QuotePreview = ({ quote, isDraft = false }) => {
   const [companySettings, setCompanySettings] = useState({
     companyPhone: '+917696275527',
     companyEmail: 'user@gmail.com',
-    invoiceLabel: 'QUOTATION'
+    invoiceLabel: 'QUOTATION',
+    advancePaymentNote: 'Please pay the advance amount to continue the process.'
   });
 
   useEffect(() => {
@@ -19,7 +20,8 @@ const QuotePreview = ({ quote, isDraft = false }) => {
         setCompanySettings({
           companyPhone: response.data.data.companyPhone || '+917696275527',
           companyEmail: response.data.data.companyEmail || 'user@gmail.com',
-          invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION'
+          invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION',
+          advancePaymentNote: response.data.data.advancePaymentNote || 'Please pay the advance amount to continue the process.'
         });
       }
     } catch (error) {
@@ -28,12 +30,13 @@ const QuotePreview = ({ quote, isDraft = false }) => {
   };
 
   const items = quote?.items || [];
+  const hasSoftGelatin = items.some(item => item.formulationType === 'Soft Gelatine');
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => sum + (item.quantity || 0) * (item.rate || 0), 0);
     const cylinderCharges = parseFloat(quote?.cylinderCharges) || 0;
     const inventoryCharges = parseFloat(quote?.inventoryCharges) || 0;
     const taxPercent = parseFloat(quote?.taxPercent) || 0;
-    const taxPercentOnCharges = parseFloat(quote?.taxPercentOnCharges) || 0;
+    const taxPercentOnCharges = 18; // Fixed at 18%
     
     // Tax on subtotal only
     const taxOnSubtotal = (subtotal * taxPercent) / 100;
@@ -70,7 +73,6 @@ const QuotePreview = ({ quote, isDraft = false }) => {
           </div>
           <div className="flex-1 text-center">
             <h1 className="text-3xl font-bold text-gray-800">{companySettings.invoiceLabel}</h1>
-            <p className="text-gray-500 mt-1">{isDraft ? 'Draft Preview' : 'Preview'}</p>
           </div>
           <div className="text-right shrink-0 min-w-[180px]">
             <p className="text-sm text-gray-500">Order Number</p>
@@ -78,7 +80,7 @@ const QuotePreview = ({ quote, isDraft = false }) => {
               {quote?.quoteNumber || 'CR-XXXX-XXXX'}
             </p>
             <p className="text-sm text-gray-500 mt-2">
-              Date: {quote?.createdAt ? new Date(quote.createdAt).toLocaleDateString('en-IN') : new Date().toLocaleDateString()}
+              Date: {quote?.createdAt ? new Date(quote.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
             </p>
             <p className="text-xs text-gray-500">
               Time: {quote?.createdAt 
@@ -98,41 +100,69 @@ const QuotePreview = ({ quote, isDraft = false }) => {
           <p className="text-gray-600">{quote?.clientEmail || 'client@email.com'}</p>
           <p className="text-gray-600">{quote?.clientPhone || '+91 XXXXX XXXXX'}</p>
         </div>
-        <div>
-          <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Marketed By</h3>
-          <p className="text-lg font-semibold text-gray-800">{quote?.marketedBy || 'Sales Person'}</p>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Marketed By</h3>
+            <p className="text-lg font-semibold text-gray-800">{quote?.marketedBy || 'Sales Person'}</p>
+          </div>
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Created By</h3>
+            <p className="text-lg font-semibold text-gray-800">{quote?.createdBy?.email || 'N/A'}</p>
+          </div>
         </div>
       </div>
 
       {/* Items Table */}
-      <div className="mb-8">
+      <div className="mb-8 overflow-x-auto">
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quote Items</h3>
-        <table className="w-full border-collapse">
+        <table className="w-full border-collapse text-xs">
           <thead>
             <tr className="bg-gray-100">
-              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">#</th>
-              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Brand Name</th>
-              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Composition</th>
-              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Formulation</th>
-              <th className="border border-gray-300 px-3 py-2 text-left text-xs font-semibold text-gray-700">Packing</th>
-              <th className="border border-gray-300 px-3 py-2 text-center text-xs font-semibold text-gray-700">Qty</th>
-              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">MRP</th>
-              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Rate</th>
-              <th className="border border-gray-300 px-3 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">#</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">Brand Name</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700" style={{ maxWidth: '120px' }}>Composition</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">Formulation Type</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">Packing</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">Packaging / Label Type</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">Carton</th>
+              <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700" style={{ maxWidth: '100px' }}>Specification</th>
+              {hasSoftGelatin && (
+                <th className="border border-gray-300 px-1 py-2 text-left text-xs font-semibold text-gray-700">Soft Gelatin Color</th>
+              )}
+              <th className="border border-gray-300 px-1 py-2 text-center text-xs font-semibold text-gray-700">Qty</th>
+              <th className="border border-gray-300 px-1 py-2 text-right text-xs font-semibold text-gray-700">MRP</th>
+              <th className="border border-gray-300 px-1 py-2 text-right text-xs font-semibold text-gray-700">Rate</th>
+              <th className="border border-gray-300 px-1 py-2 text-right text-xs font-semibold text-gray-700">Amount</th>
             </tr>
           </thead>
           <tbody>
             {items.map((item, index) => (
               <tr key={index} className={index % 2 === 0 ? 'bg-white' : 'bg-gray-50'}>
-                <td className="border border-gray-300 px-3 py-2 text-sm">{index + 1}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm font-medium">{item.brandName || '-'}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-gray-600">{item.composition || '-'}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm">{item.formulationType || '-'}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm">{item.packing || '-'}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-center">{item.quantity || 0}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{(item.mrp || 0).toFixed(2)}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-right">₹{(item.rate || 0).toFixed(2)}</td>
-                <td className="border border-gray-300 px-3 py-2 text-sm text-right font-medium">
+                <td className="border border-gray-300 px-1 py-2 text-xs">{index + 1}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs font-medium">{item.brandName || '-'}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs text-gray-600" style={{ maxWidth: '120px', wordWrap: 'break-word' }}>{item.composition || '-'}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs">{item.formulationType || '-'}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs">
+                  {item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-')}
+                </td>
+                <td className="border border-gray-300 px-1 py-2 text-xs">
+                  {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
+                </td>
+                <td className="border border-gray-300 px-1 py-2 text-xs">
+                  {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? (
+                    item.cartonPacking === 'Custom' ? (item.customCartonPacking || '-') : (item.cartonPacking || '-')
+                  ) : '-'}
+                </td>
+                <td className="border border-gray-300 px-1 py-2 text-xs" style={{ maxWidth: '100px', wordWrap: 'break-word' }}>{item.specification || '-'}</td>
+                {hasSoftGelatin && (
+                  <td className="border border-gray-300 px-1 py-2 text-xs">
+                    {item.formulationType === 'Soft Gelatine' ? (item.softGelatinColor || '-') : '-'}
+                  </td>
+                )}
+                <td className="border border-gray-300 px-1 py-2 text-xs text-center">{item.quantity || 0}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs text-right">₹{(item.mrp || 0).toFixed(2)}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs text-right">₹{(item.rate || 0).toFixed(2)}</td>
+                <td className="border border-gray-300 px-1 py-2 text-xs text-right font-medium">
                   ₹{((item.quantity || 0) * (item.rate || 0)).toFixed(2)}
                 </td>
               </tr>
@@ -168,7 +198,7 @@ const QuotePreview = ({ quote, isDraft = false }) => {
           )}
           {taxOnCharges > 0 && (
             <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-gray-600">Tax on Cylinder & Inventory Charges ({quote?.taxPercentOnCharges || quote?.taxPercent}%)</span>
+              <span className="text-gray-600">Tax on Cylinder & Inventory Charges (18%)</span>
               <span className="font-medium">₹{taxOnCharges.toFixed(2)}</span>
             </div>
           )}
@@ -187,6 +217,13 @@ const QuotePreview = ({ quote, isDraft = false }) => {
                <span className="font-medium">₹{advancePayment.toFixed(2)}</span>
             </div>
         </div>
+      </div>
+
+      {/* Advance Payment Note */}
+      <div className="mb-6 pb-4 border-b border-gray-300">
+        <p className="text-sm font-medium text-gray-700 text-center">
+          {companySettings.advancePaymentNote}
+        </p>
       </div>
 
       {/* Terms & Account Details */}

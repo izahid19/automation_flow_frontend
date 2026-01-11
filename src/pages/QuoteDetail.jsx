@@ -28,6 +28,7 @@ const QuoteDetail = () => {
   const { user, isAdmin, isSalesExecutive, isMD, isDesigner } = useAuth();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
+  const hasSoftGelatin = quote?.items?.some(item => item.formulationType === 'Soft Gelatine');
   const [actionLoading, setActionLoading] = useState(false);
   const [comments, setComments] = useState('');
   const [showPreview, setShowPreview] = useState(false);
@@ -207,7 +208,7 @@ const QuoteDetail = () => {
               {getStatusBadge(quote.status)}
             </div>
             <p className="text-[var(--text-secondary)]">
-              Created on {new Date(quote.createdAt).toLocaleDateString()}
+              Created on {new Date(quote.createdAt).toLocaleDateString('en-GB')}
             </p>
           </div>
         </div>
@@ -294,9 +295,15 @@ const QuoteDetail = () => {
                     <th className="whitespace-nowrap">Brand Name</th>
                     <th className="whitespace-nowrap">Order Type</th>
                     <th className="whitespace-nowrap">Category</th>
-                    <th className="whitespace-nowrap" style={{ minWidth: '200px' }}>Composition</th>
-                    <th className="whitespace-nowrap">Formulation</th>
+                    <th className="whitespace-nowrap" style={{ maxWidth: '200px' }}>Composition</th>
+                    <th className="whitespace-nowrap">Formulation Type</th>
                     <th className="whitespace-nowrap">Packing</th>
+                    <th className="whitespace-nowrap">Packaging / Label Type</th>
+                    <th className="whitespace-nowrap">Carton</th>
+                    <th className="whitespace-nowrap" style={{ maxWidth: '100px' }}>Specification</th>
+                    {hasSoftGelatin && (
+                      <th className="whitespace-nowrap">Soft Gelatin Color</th>
+                    )}
                     <th className="text-center whitespace-nowrap">Qty</th>
                     <th className="text-right whitespace-nowrap">MRP</th>
                     <th className="text-right whitespace-nowrap">Rate</th>
@@ -314,9 +321,25 @@ const QuoteDetail = () => {
                         </span>
                       </td>
                       <td className="text-sm">{item.categoryType || '-'}</td>
-                      <td className="text-sm">{item.composition || '-'}</td>
+                      <td className="text-sm" style={{ maxWidth: '200px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{item.composition || '-'}</td>
                       <td className="text-sm">{item.formulationType || '-'}</td>
-                      <td className="text-sm">{item.packing || '-'}</td>
+                      <td className="text-sm">
+                        {item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-')}
+                      </td>
+                      <td className="text-sm">
+                        {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
+                      </td>
+                      <td className="text-sm">
+                        {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? (
+                          item.cartonPacking === 'Custom' ? (item.customCartonPacking || '-') : (item.cartonPacking || '-')
+                        ) : '-'}
+                      </td>
+                      <td className="text-sm" style={{ maxWidth: '100px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{item.specification || '-'}</td>
+                      {hasSoftGelatin && (
+                        <td className="text-sm">
+                          {item.formulationType === 'Soft Gelatine' ? (item.softGelatinColor || '-') : '-'}
+                        </td>
+                      )}
                       <td className="text-center">{item.quantity}</td>
                       <td className="text-right">₹{item.mrp?.toFixed(2)}</td>
                       <td className="text-right">₹{item.rate?.toFixed(2)}</td>
@@ -382,7 +405,7 @@ const QuoteDetail = () => {
                 const cylinderCharges = parseFloat(quote.cylinderCharges) || 0;
                 const inventoryCharges = parseFloat(quote.inventoryCharges) || 0;
                 const taxPercent = parseFloat(quote.taxPercent) || 0;
-                const taxPercentOnCharges = parseFloat(quote.taxPercentOnCharges) || 0;
+                const taxPercentOnCharges = 18; // Fixed at 18%
                 const taxOnSubtotal = (subtotal * taxPercent) / 100;
                 const chargesTotal = cylinderCharges + inventoryCharges;
                 const taxOnCharges = (chargesTotal * taxPercentOnCharges) / 100;
@@ -410,7 +433,7 @@ const QuoteDetail = () => {
                     )}
                     {taxOnCharges > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[var(--text-secondary)]">Tax on Cylinder & Inventory Charges ({taxPercentOnCharges || taxPercent}%)</span>
+                        <span className="text-[var(--text-secondary)]">Tax on Cylinder & Inventory Charges (18%)</span>
                         <span>₹{taxOnCharges.toFixed(2)}</span>
                       </div>
                     )}

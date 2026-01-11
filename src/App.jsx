@@ -70,9 +70,9 @@ function App() {
           toastOptions={{
             duration: 3000,
             style: {
-              background: 'var(--surface)',
-              color: 'var(--text-primary)',
-              border: '1px solid var(--border)',
+              background: 'oklch(0.18 0.005 285.885)',
+              color: 'oklch(0.985 0 0)',
+              border: '1px solid oklch(0.3 0.005 286)',
             },
             success: {
               iconTheme: {

@@ -14,6 +14,7 @@ const Settings = () => {
   const [settings, setSettings] = useState({
     terms: 'Payment due within 30 days. All prices in INR.',
     bankDetails: '',
+    advancePaymentNote: 'Please pay the advance amount to continue the process.',
   });
 
   useEffect(() => {
@@ -27,6 +28,7 @@ const Settings = () => {
         setSettings({
           terms: response.data.data.terms || 'Payment due within 30 days. All prices in INR.',
           bankDetails: response.data.data.bankDetails || '',
+          advancePaymentNote: response.data.data.advancePaymentNote || 'Please pay the advance amount to continue the process.',
         });
       }
     } catch (error) {
@@ -126,6 +128,27 @@ Branch: Main Branch"
           </CardContent>
         </Card>
       </div>
+
+      {/* Advance Payment Note */}
+      <Card>
+        <CardHeader>
+          <CardTitle>Advance Payment Note</CardTitle>
+          <CardDescription>
+            Message displayed above Terms & Conditions on quotes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Input
+              id="advancePaymentNote"
+              name="advancePaymentNote"
+              value={settings.advancePaymentNote}
+              onChange={handleChange}
+              placeholder="Enter advance payment note..."
+            />
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Save Button */}
       <div className="flex justify-end">
