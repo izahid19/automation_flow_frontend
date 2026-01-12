@@ -9,6 +9,8 @@ export const DEFAULT_ITEM = {
   customPacking: '',
   packagingType: '',
   customPackagingType: '',
+  pvcType: '',
+  customPvcType: '',
   cartonPacking: '',
   customCartonPacking: '',
   specification: '',

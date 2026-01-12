@@ -205,12 +205,34 @@ const QuoteForm = () => {
   };
 
   const handleChange = (e) => {
-    setFormData({ ...formData, [e.target.name]: e.target.value });
+    const { name, value } = e.target;
+    
+    // For numeric fields, allow decimal input
+    if (name === 'taxPercent' || name === 'cylinderCharges' || name === 'inventoryCharges') {
+      // Allow empty string, numbers, and decimal point
+      if (value === '' || value === '.' || /^\d*\.?\d*$/.test(value)) {
+        setFormData({ ...formData, [name]: value });
+      }
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleItemChange = (index, field, value) => {
     const newItems = [...formData.items];
-    newItems[index][field] = field === 'quantity' || field === 'rate' || field === 'mrp' ? parseFloat(value) || 0 : value;
+    
+    // For numeric fields, allow decimal input by keeping as string until blur or calculation
+    if (field === 'quantity' || field === 'rate' || field === 'mrp') {
+      // Allow empty string, numbers, and decimal point
+      if (value === '' || value === '.' || /^\d*\.?\d*$/.test(value)) {
+        newItems[index][field] = value;
+      } else {
+        // If invalid, keep previous value
+        return;
+      }
+    } else {
+      newItems[index][field] = value;
+    }
 
     // Reset dependent fields if formulation changes
     if (field === 'formulationType') {
@@ -218,6 +240,14 @@ const QuoteForm = () => {
       newItems[index].packagingType = '';
       newItems[index].cartonPacking = '';
       newItems[index].customCartonPacking = '';
+      newItems[index].pvcType = '';
+      newItems[index].customPvcType = '';
+    }
+    
+    // Reset PVC Type fields if packaging type changes away from Blister
+    if (field === 'packagingType' && value !== 'Blister') {
+      newItems[index].pvcType = '';
+      newItems[index].customPvcType = '';
     }
 
     setFormData({ ...formData, items: newItems });
@@ -245,7 +275,11 @@ const QuoteForm = () => {
   };
 
   const calculateTotals = () => {
-    const subtotal = formData.items.reduce((sum, item) => sum + item.quantity * item.rate, 0);
+    const subtotal = formData.items.reduce((sum, item) => {
+      const qty = parseFloat(item.quantity) || 0;
+      const rate = parseFloat(item.rate) || 0;
+      return sum + (qty * rate);
+    }, 0);
     const cylinderCharges = parseFloat(formData.cylinderCharges) || 0;
     const inventoryCharges = parseFloat(formData.inventoryCharges) || 0;
     const taxPercent = parseFloat(formData.taxPercent) || 0;
@@ -650,6 +684,36 @@ const QuoteForm = () => {
                           )}
                         </div>
 
+                        {/* PVC Type Field - Only for Blister packaging */}
+                        {item.packagingType === 'Blister' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              PVC Type
+                            </Label>
+                            <Select
+                              value={item.pvcType || ''}
+                              onValueChange={(value) => handleItemChange(index, 'pvcType', value)}
+                            >
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Select PVC Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Clear PVC">Clear PVC</SelectItem>
+                                <SelectItem value="Amber PVC">Amber PVC</SelectItem>
+                                <SelectItem value="Custom">Custom</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {item.pvcType === 'Custom' && (
+                              <Input
+                                value={item.customPvcType || ''}
+                                onChange={(e) => handleItemChange(index, 'customPvcType', e.target.value)}
+                                placeholder="Enter custom PVC type"
+                                className="h-10 mt-2"
+                              />
+                            )}
+                          </div>
+                        )}
+
                         {/* Carton Field - Only for Syrup/Suspension and Dry Syrup */}
                         {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) && (
                           <div className="space-y-2">
@@ -726,8 +790,7 @@ const QuoteForm = () => {
                           </Label>
                           <Input
                             type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
+                            inputMode="decimal"
                             value={item.mrp}
                             onChange={(e) => handleItemChange(index, 'mrp', e.target.value)}
                             onKeyDown={handleNumericKeyDown}
@@ -742,8 +805,7 @@ const QuoteForm = () => {
                           </Label>
                           <Input
                             type="text"
-                            inputMode="numeric"
-                            pattern="[0-9]*"
+                            inputMode="decimal"
                             value={item.rate}
                             onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
                             onKeyDown={handleNumericKeyDown}
@@ -811,8 +873,7 @@ const QuoteForm = () => {
                   <Input
                     id="taxPercent"
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode="decimal"
                     name="taxPercent"
                     value={formData.taxPercent}
                     onChange={handleChange}
@@ -832,8 +893,7 @@ const QuoteForm = () => {
                   <Input
                     id="cylinderCharges"
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode="decimal"
                     name="cylinderCharges"
                     value={formData.cylinderCharges}
                     onChange={handleChange}
@@ -847,8 +907,7 @@ const QuoteForm = () => {
                   <Input
                     id="inventoryCharges"
                     type="text"
-                    inputMode="numeric"
-                    pattern="[0-9]*"
+                    inputMode="decimal"
                     name="inventoryCharges"
                     value={formData.inventoryCharges}
                     onChange={handleChange}

@@ -21,6 +21,9 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuotePreview from '@/components/QuotePreview';
+import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card';
+import { Separator } from '../components/ui/separator';
+import { Label } from '../components/ui/label';
 
 const QuoteDetail = () => {
   const { id } = useParams();
@@ -29,7 +32,9 @@ const QuoteDetail = () => {
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const hasSoftGelatin = quote?.items?.some(item => item.formulationType === 'Soft Gelatine');
+  const hasBlister = quote?.items?.some(item => item.packagingType === 'Blister');
   const [actionLoading, setActionLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
   const [comments, setComments] = useState('');
   const [showPreview, setShowPreview] = useState(false);
   const previewRef = useRef(null);
@@ -149,6 +154,7 @@ const QuoteDetail = () => {
   };
 
   const handleDownloadPDF = async () => {
+    setDownloadLoading(true);
     try {
       const response = await quoteAPI.downloadPDF(id);
       const url = window.URL.createObjectURL(new Blob([response.data]));
@@ -162,6 +168,8 @@ const QuoteDetail = () => {
     } catch (error) {
       console.error('PDF download error:', error);
       toast.error('Failed to download PDF');
+    } finally {
+      setDownloadLoading(false);
     }
   };
 
@@ -229,8 +237,16 @@ const QuoteDetail = () => {
             {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
             {showPreview ? 'Close Preview' : 'Preview'}
           </button>
-          <button onClick={handleDownloadPDF} className="btn btn-secondary">
-            <Download size={18} />
+          <button 
+            onClick={handleDownloadPDF} 
+            disabled={downloadLoading}
+            className="btn btn-secondary"
+          >
+            {downloadLoading ? (
+              <Loader2 className="w-5 h-5 animate-spin" />
+            ) : (
+              <Download size={18} />
+            )}
             Download PDF
           </button>
           {canSubmit && (
@@ -285,73 +301,217 @@ const QuoteDetail = () => {
           </div>
 
           {/* Items */}
-          <div className="card">
-            <h2 className="text-lg font-semibold mb-4">Quote Items</h2>
-            <div className="overflow-x-auto">
-              <table className="table" style={{ tableLayout: 'auto' }}>
-                <thead>
-                  <tr>
-                    <th className="text-center whitespace-nowrap">#</th>
-                    <th className="whitespace-nowrap">Brand Name</th>
-                    <th className="whitespace-nowrap">Order Type</th>
-                    <th className="whitespace-nowrap">Category</th>
-                    <th className="whitespace-nowrap" style={{ maxWidth: '200px' }}>Composition</th>
-                    <th className="whitespace-nowrap">Formulation Type</th>
-                    <th className="whitespace-nowrap">Packing</th>
-                    <th className="whitespace-nowrap">Packaging / Label Type</th>
-                    <th className="whitespace-nowrap">Carton</th>
-                    <th className="whitespace-nowrap" style={{ maxWidth: '100px' }}>Specification</th>
-                    {hasSoftGelatin && (
-                      <th className="whitespace-nowrap">Soft Gelatin Color</th>
-                    )}
-                    <th className="text-center whitespace-nowrap">Qty</th>
-                    <th className="text-right whitespace-nowrap">MRP</th>
-                    <th className="text-right whitespace-nowrap">Rate</th>
-                    <th className="text-right whitespace-nowrap">Amount</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {quote.items?.map((item, index) => (
-                    <tr key={index}>
-                      <td className="text-center font-medium">{index + 1}</td>
-                      <td className="font-medium">{item.brandName || '-'}</td>
-                      <td>
+          <Card>
+            <CardHeader>
+              <CardTitle>Quote Items</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {quote.items?.map((item, index) => {
+                const showPackingField = !['Injection', 'I.V/Fluid'].includes(item.formulationType);
+                const packingValue = item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-');
+                const packagingValue = item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-');
+                const pvcValue = item.packagingType === 'Blister' 
+                  ? (item.pvcType === 'Custom' ? (item.customPvcType || '-') : (item.pvcType || '-'))
+                  : '-';
+                const cartonValue = ['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) 
+                  ? (item.cartonPacking === 'Custom' ? (item.customCartonPacking || '-') : (item.cartonPacking || '-')) 
+                  : '-';
+
+                return (
+                  <div key={index} className="p-5 border border-border/50 bg-card rounded-xl shadow-sm space-y-5 transition-all hover:border-border">
+                    {/* Item Header */}
+                    <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <div className="flex items-center gap-3">
+                        <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                          {index + 1}
+                        </span>
+                        <div className="flex flex-col">
+                          <span className="font-bold text-lg text-white">{item.brandName || 'Product Name'}</span>
+                          <span className="font-semibold text-xs text-muted-foreground">Product Details</span>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="space-y-6">
+                      {/* Product Specifications Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Brand Name */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Brand Name
+                          </Label>
+                          <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center font-medium">
+                            {item.brandName || '-'}
+                          </div>
+                        </div>
+
+                        {/* Order Type */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Order Type
+                          </Label>
+                          <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
                         <span className={`badge ${item.orderType === 'New' ? 'badge-success' : 'badge-secondary'}`}>
                           {item.orderType || '-'}
                         </span>
-                      </td>
-                      <td className="text-sm">{item.categoryType || '-'}</td>
-                      <td className="text-sm" style={{ maxWidth: '200px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{item.composition || '-'}</td>
-                      <td className="text-sm">{item.formulationType || '-'}</td>
-                      <td className="text-sm">
-                        {item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-')}
-                      </td>
-                      <td className="text-sm">
-                        {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
-                      </td>
-                      <td className="text-sm">
-                        {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? (
-                          item.cartonPacking === 'Custom' ? (item.customCartonPacking || '-') : (item.cartonPacking || '-')
-                        ) : '-'}
-                      </td>
-                      <td className="text-sm" style={{ maxWidth: '100px', whiteSpace: 'normal', wordWrap: 'break-word' }}>{item.specification || '-'}</td>
-                      {hasSoftGelatin && (
-                        <td className="text-sm">
-                          {item.formulationType === 'Soft Gelatine' ? (item.softGelatinColor || '-') : '-'}
-                        </td>
-                      )}
-                      <td className="text-center">{item.quantity}</td>
-                      <td className="text-right">₹{item.mrp?.toFixed(2)}</td>
-                      <td className="text-right">₹{item.rate?.toFixed(2)}</td>
-                      <td className="text-right font-medium">
-                        ₹{(item.quantity * item.rate)?.toFixed(2)}
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                          </div>
+                        </div>
+                        
+                        {/* Category Type */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Category
+                          </Label>
+                          <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center font-medium">
+                            {item.categoryType || '-'}
+                          </div>
+                        </div>
+
+                        {/* Formulation Type */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Formulation
+                          </Label>
+                          <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                            {item.formulationType || '-'}
+                          </div>
+                        </div>
+
+                        {/* Color of Soft Gelatin - Only for Soft Gelatine formulation */}
+                        {item.formulationType === 'Soft Gelatine' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Color of Soft Gelatin
+                            </Label>
+                            <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                              {item.softGelatinColor || '-'}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+
+                      {/* Technical Specs Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        {/* Composition - taking full width */}
+                        <div className="md:col-span-2 space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Composition
+                          </Label>
+                          <div className="min-h-[40px] px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                            {item.composition || '-'}
+                          </div>
+                        </div>
+
+                        {/* Packing (Box / Unit) - Conditional */}
+                        {showPackingField && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Unit Pack' : 'Box Packing'}
+                            </Label>
+                            <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                              {packingValue}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Packaging Type */}
+                        <div className={`space-y-2 ${!showPackingField ? 'md:col-span-2' : ''}`}>
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'}
+                          </Label>
+                          <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                            {packagingValue}
+                          </div>
+                        </div>
+
+                        {/* PVC Type Field - Only for Blister packaging */}
+                        {item.packagingType === 'Blister' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              PVC Type
+                            </Label>
+                            <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                              {pvcValue}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Carton Field - Only for Syrup/Suspension and Dry Syrup */}
+                        {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Carton
+                            </Label>
+                            <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                              {cartonValue}
+                            </div>
+                          </div>
+                        )}
+
+                        {/* Specification - Optional */}
+                        <div className="md:col-span-2 space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Specification
+                          </Label>
+                          <div className="min-h-[40px] px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                            {item.specification || '-'}
+                          </div>
+                        </div>
+                      </div>
+
+                      <Separator className="bg-border/40" />
+
+                      {/* Commercials Section */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-5 items-end">
+                        {/* Quantity */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Quantity
+                          </Label>
+                          <div className="relative">
+                            <div className="h-12 px-3 py-2 bg-background border border-input rounded-md text-lg font-medium flex items-center">
+                              {item.quantity || 0}
+                            </div>
+                            <span className="absolute right-3 top-3.5 text-xs text-muted-foreground">Units</span>
+                          </div>
+                        </div>
+
+                        {/* MRP */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            MRP (₹)
+                          </Label>
+                          <div className="h-12 px-3 py-2 bg-background border border-input rounded-md text-lg flex items-center">
+                            ₹{item.mrp?.toFixed(2) || '0.00'}
+                          </div>
+                        </div>
+
+                        {/* Our Rate */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Our Rate (₹)
+                          </Label>
+                          <div className="h-12 px-3 py-2 bg-background border border-primary/20 rounded-md text-xl font-bold text-primary flex items-center">
+                            ₹{item.rate?.toFixed(2) || '0.00'}
             </div>
           </div>
+
+                        {/* Total Amount Display */}
+                        <div className="space-y-2">
+                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                            Total Amount
+                          </Label>
+                          <div className="h-12 px-3 py-2 bg-primary/10 border border-primary/30 rounded-md text-lg font-bold text-primary flex items-center">
+                            ₹{((item.quantity || 0) * (item.rate || 0))?.toFixed(2)}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </CardContent>
+          </Card>
 
           {/* Approval Actions */}
           {(canApproveSE || canApproveMD) && (

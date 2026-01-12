@@ -2,18 +2,79 @@ import { useState, useEffect } from 'react';
 import { settingsAPI } from '../services/api';
 import { Button } from '../components/ui/button';
 import { Input } from '../components/ui/input';
+import { Textarea } from '../components/ui/textarea';
 import { Label } from '../components/ui/label';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../components/ui/card';
-import { Save, Loader2, Tag } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
+import { Save, Loader2, Tag, Eye } from 'lucide-react';
 import toast from 'react-hot-toast';
+import QuotePreview from '../components/QuotePreview';
 
 const InvoiceLabel = () => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
+  const [previewDesign, setPreviewDesign] = useState(null);
   const [settings, setSettings] = useState({
     invoiceLabel: 'QUOTATION',
     companyPhone: '+917696275527',
     companyEmail: 'user@gmail.com',
+    invoiceDesign: 'design1',
+    terms: 'Payment due within 30 days. All prices in INR.',
+    bankDetails: '',
+    advancePaymentNote: 'Please pay the advance amount to continue the process.',
+  });
+  const [originalSettings, setOriginalSettings] = useState({
+    invoiceLabel: 'QUOTATION',
+    companyPhone: '+917696275527',
+    companyEmail: 'user@gmail.com',
+    invoiceDesign: 'design1',
+    terms: 'Payment due within 30 days. All prices in INR.',
+    bankDetails: '',
+    advancePaymentNote: 'Please pay the advance amount to continue the process.',
+  });
+  
+  // Sample quote data for preview - will use settings values
+  const getSampleQuote = () => ({
+    quoteNumber: 'CR-2024-0001',
+    clientName: 'Sample Client Company',
+    partyName: 'Sample Client Company',
+    clientEmail: 'client@example.com',
+    clientPhone: '+91 98765 43210',
+    marketedBy: 'John Doe',
+    createdAt: new Date().toISOString(),
+    createdBy: { email: 'admin@example.com' },
+    items: [
+      {
+        brandName: 'Sample Product 1',
+        composition: 'Paracetamol 500mg',
+        formulationType: 'Tablet',
+        packing: '10x10',
+        packagingType: 'Blister',
+        pvcType: 'Clear PVC',
+        cartonPacking: '-',
+        specification: 'Test Specification',
+        quantity: 100,
+        mrp: 50,
+        rate: 40,
+      },
+      {
+        brandName: 'Sample Product 2',
+        composition: 'Ibuprofen 400mg',
+        formulationType: 'Capsule',
+        packing: '10x10',
+        packagingType: 'Alu Alu',
+        cartonPacking: '-',
+        specification: '',
+        quantity: 50,
+        mrp: 60,
+        rate: 45,
+      },
+    ],
+    taxPercent: 18,
+    cylinderCharges: 500,
+    inventoryCharges: 300,
+    terms: settings.terms || 'Payment due within 30 days. All prices in INR.',
+    bankDetails: settings.bankDetails || 'Account Number: 123456789\nBank: Example Bank\nIFSC: EXMP0001234',
   });
 
   useEffect(() => {
@@ -24,11 +85,17 @@ const InvoiceLabel = () => {
     try {
       const response = await settingsAPI.getAll();
       if (response.data.success) {
-        setSettings({
+        const fetchedSettings = {
           invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION',
           companyPhone: response.data.data.companyPhone || '+917696275527',
           companyEmail: response.data.data.companyEmail || 'user@gmail.com',
-        });
+          invoiceDesign: response.data.data.invoiceDesign || 'design1',
+          terms: response.data.data.terms || 'Payment due within 30 days. All prices in INR.',
+          bankDetails: response.data.data.bankDetails || '',
+          advancePaymentNote: response.data.data.advancePaymentNote || 'Please pay the advance amount to continue the process.',
+        };
+        setSettings(fetchedSettings);
+        setOriginalSettings(fetchedSettings);
       }
     } catch (error) {
       console.error('Failed to fetch settings:', error);
@@ -41,6 +108,7 @@ const InvoiceLabel = () => {
     setSaving(true);
     try {
       await settingsAPI.update(settings);
+      setOriginalSettings(settings);
       toast.success('Settings saved successfully!');
     } catch (error) {
       toast.error(error.response?.data?.message || 'Failed to save settings');
@@ -49,12 +117,30 @@ const InvoiceLabel = () => {
     }
   };
 
+  // Check if settings have changed
+  const hasChanges = JSON.stringify(settings) !== JSON.stringify(originalSettings);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setSettings({
       ...settings,
       [name]: name === 'invoiceLabel' ? value.toUpperCase() : value,
     });
+  };
+
+  const handleDesignChange = (value) => {
+    setSettings({
+      ...settings,
+      invoiceDesign: value,
+    });
+  };
+
+  const handlePreview = (design) => {
+    setPreviewDesign(design);
+  };
+
+  const closePreview = () => {
+    setPreviewDesign(null);
   };
 
   if (loading) {
@@ -105,6 +191,58 @@ const InvoiceLabel = () => {
               </p>
             </div>
 
+            {/* Invoice Design Selection */}
+            <div className="space-y-2">
+              <Label htmlFor="invoiceDesign">Invoice Design</Label>
+              <Select value={settings.invoiceDesign} onValueChange={handleDesignChange}>
+                <SelectTrigger id="invoiceDesign" className="w-full">
+                  <SelectValue placeholder="Select Design" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="design1">Design 1 - Table Layout (Default)</SelectItem>
+                  <SelectItem value="design2">Design 2 - Card Layout</SelectItem>
+                  <SelectItem value="design3">Design 3 - Compact List</SelectItem>
+                </SelectContent>
+              </Select>
+              <p className="text-xs text-muted-foreground">
+                Choose how items are displayed on invoices and quotes
+              </p>
+              
+              {/* Design Preview Buttons */}
+              <div className="flex gap-2 mt-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePreview('design1')}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Design 1
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePreview('design2')}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Design 2
+                </Button>
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => handlePreview('design3')}
+                  className="flex-1"
+                >
+                  <Eye className="w-4 h-4 mr-2" />
+                  Preview Design 3
+                </Button>
+              </div>
+            </div>
+
             {/* Contact Information */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div className="space-y-2">
@@ -134,9 +272,99 @@ const InvoiceLabel = () => {
         </CardContent>
       </Card>
 
+      {/* Terms & Conditions, Account Details, and Advance Payment Note */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Terms & Conditions */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Terms & Conditions</CardTitle>
+            <CardDescription>
+              Default terms that will appear on all quotes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Textarea
+                id="terms"
+                name="terms"
+                value={settings.terms}
+                onChange={handleChange}
+                placeholder="Enter default terms and conditions..."
+                className="min-h-[200px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Account Details */}
+        <Card>
+          <CardHeader>
+            <CardTitle>Account Details</CardTitle>
+            <CardDescription>
+              Bank account information that will appear on quotes
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <Textarea
+                id="bankDetails"
+                name="bankDetails"
+                value={settings.bankDetails}
+                onChange={handleChange}
+                placeholder="Enter bank account details...
+Example:
+Bank Name: XYZ Bank
+Account No: 1234567890
+IFSC Code: XYZB0001234
+Branch: Main Branch"
+                className="min-h-[200px]"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Advance Payment Note */}
+      <Card className="max-w-3xl">
+        <CardHeader>
+          <CardTitle>Advance Payment Note</CardTitle>
+          <CardDescription>
+            Message displayed above Terms & Conditions on quotes
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-4">
+            <Input
+              id="advancePaymentNote"
+              name="advancePaymentNote"
+              value={settings.advancePaymentNote}
+              onChange={handleChange}
+              placeholder="Enter advance payment note..."
+            />
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Preview Modal */}
+      {previewDesign && (
+        <Card className="max-w-7xl">
+          <CardHeader className="flex flex-row items-center justify-between">
+            <CardTitle>Preview - {previewDesign === 'design1' ? 'Design 1 (Table Layout)' : previewDesign === 'design2' ? 'Design 2 (Card Layout)' : 'Design 3 (Compact List)'}</CardTitle>
+            <Button variant="outline" size="sm" onClick={closePreview}>
+              Close Preview
+            </Button>
+          </CardHeader>
+          <CardContent>
+            <div className="border-2 border-gray-200 rounded-lg overflow-hidden">
+              <QuotePreview quote={getSampleQuote()} designOverride={previewDesign} />
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Save Button */}
-      <div className="flex justify-end max-w-3xl">
-        <Button onClick={handleSave} disabled={saving} size="lg">
+      <div className="flex justify-end">
+        <Button onClick={handleSave} disabled={saving || !hasChanges} size="lg">
           {saving ? (
             <Loader2 className="w-4 h-4 animate-spin mr-2" />
           ) : (

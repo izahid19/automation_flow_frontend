@@ -16,7 +16,6 @@ import QuoteDetail from './pages/QuoteDetail';
 import Manufacturers from './pages/Manufacturers';
 import Users from './pages/Users';
 import InvoiceLabel from './pages/InvoiceLabel';
-import Settings from './pages/Settings';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -138,14 +137,6 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <InvoiceLabel />
-                </ProtectedRoute>
-              }
-            />
-            <Route
-              path="settings"
-              element={
-                <ProtectedRoute allowedRoles={['admin', 'manager']}>
-                  <Settings />
                 </ProtectedRoute>
               }
             />

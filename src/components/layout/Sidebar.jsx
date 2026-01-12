@@ -14,7 +14,6 @@ import {
   Users,
   LogOut,
   Menu,
-  Settings,
   Tag,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -38,7 +37,6 @@ const Sidebar = () => {
     { path: '/manufacturers', label: 'Manufacturers', icon: Factory, roles: ['admin', 'manager'] },
     { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
     { path: '/invoice-label', label: 'Invoice Label', icon: Tag, roles: ['admin'] },
-    { path: '/settings', label: 'Settings', icon: Settings, roles: ['admin', 'manager'] },
   ];
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(user?.role || ''));
