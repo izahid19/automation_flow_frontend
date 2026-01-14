@@ -46,6 +46,7 @@ export const useQuoteValidation = () => {
     // Items validation
     const itemValidation = formData.items?.some((item) => {
       const isPharma = !['Injection', 'I.V/Fluid'].includes(item.formulationType);
+      const isSoftGelatin = item.formulationType === 'Soft Gelatine';
       return (
         !item.brandName ||
         !item.composition ||
@@ -53,7 +54,8 @@ export const useQuoteValidation = () => {
         !item.rate ||
         !item.mrp ||
         !item.packagingType ||
-        (isPharma && !item.packing)
+        (isPharma && !item.packing) ||
+        (isSoftGelatin && !item.softGelatinColor?.trim())
       );
     });
 

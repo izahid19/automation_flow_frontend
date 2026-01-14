@@ -9,7 +9,7 @@ const Design3 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
         <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Quote Items</h3>
         <div className="space-y-1">
           {items.map((item, index) => (
-            <div key={index} className={`py-3 px-4 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} border-l-4 ${index % 2 === 0 ? 'border-orange-500' : 'border-gray-300'}`}>
+            <div key={index} className={`py-3 px-4 ${index % 2 === 0 ? 'bg-gray-50' : 'bg-white'} border-l-4 ${index % 2 === 0 ? 'border-emerald-500' : 'border-gray-300'}`}>
               <div className="flex items-start justify-between">
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-2">
@@ -54,7 +54,7 @@ const Design3 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                     )}
                     {hasSoftGelatin && item.formulationType === 'Soft Gelatine' && (
                       <div>
-                        <span className="font-medium">Color of Soft Gelatin:</span> {item.softGelatinColor || '-'}
+                        <span className="font-medium">Colour of Soft Gelatin:</span> {item.softGelatinColor || '-'}
                       </div>
                     )}
                   </div>

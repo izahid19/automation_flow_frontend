@@ -19,7 +19,12 @@ const InvoiceFooter = ({ quote, companySettings, totals }) => {
           )}
           {(quote?.cylinderCharges > 0) && (
             <div className="flex justify-between py-2 border-b border-gray-200">
-              <span className="text-gray-600">Cylinder Charges</span>
+              <span className="text-gray-600">
+                Cylinder Charges
+                {quote?.numberOfCylinders > 0 && (
+                  <span className="text-xs ml-1">({quote.numberOfCylinders} Cylinder{quote.numberOfCylinders > 1 ? 's' : ''})</span>
+                )}
+              </span>
               <span className="font-medium">₹{parseFloat(quote.cylinderCharges).toFixed(2)}</span>
             </div>
           )}

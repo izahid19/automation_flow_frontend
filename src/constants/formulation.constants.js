@@ -17,7 +17,7 @@ export const PACKAGING_OPTIONS = {
   'Syrup/Suspension': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
   'Dry Syrup': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
   'Ointment/Cream': ['With carton', 'With metalic carton', 'With flap'],
-  'Sachet': ['Only label', 'Sticker label', 'Metalic label', 'With carton', 'With metalic carton'],
+  'Sachet': ['With carton'],
 };
 
 // Carton options for specific formulation types

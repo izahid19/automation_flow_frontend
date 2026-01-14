@@ -79,6 +79,7 @@ const QuoteForm = () => {
     taxPercent: 0,
     taxPercentOnCharges: 18,
     cylinderCharges: 0,
+    numberOfCylinders: 0,
     inventoryCharges: 0,
     terms: 'Payment due within 30 days. All prices in INR.',
     bankDetails: '',
@@ -111,6 +112,7 @@ const QuoteForm = () => {
           taxPercent: quote.taxPercent || 0,
           taxPercentOnCharges: 18, // Fixed at 18%, cannot be changed
           cylinderCharges: quote.cylinderCharges || 0,
+          numberOfCylinders: quote.numberOfCylinders || 0,
           inventoryCharges: quote.inventoryCharges || 0,
           terms: quote.terms || 'Payment due within 30 days. All prices in INR.',
           bankDetails: quote.bankDetails || '',
@@ -185,6 +187,10 @@ const QuoteForm = () => {
 
     const itemValidation = formData.items.some((item) => {
       const isPharma = !['Injection', 'I.V/Fluid'].includes(item.formulationType);
+      const isSoftGelatin = item.formulationType === 'Soft Gelatine';
+      const isLiquidInjection = item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection';
+      const isDryInjection = item.formulationType === 'Injection' && item.injectionType === 'Dry Injection';
+      const isDrySyrup = item.formulationType === 'Dry Syrup';
       return (
         !item.brandName ||
         !item.composition ||
@@ -192,7 +198,15 @@ const QuoteForm = () => {
         !item.rate ||
         !item.mrp ||
         !item.packagingType ||
-        (isPharma && !item.packing)
+        (isPharma && !item.packing) ||
+        (isSoftGelatin && !item.softGelatinColor?.trim()) ||
+        (isLiquidInjection && !item.injectionBoxPacking?.trim()) ||
+        (isLiquidInjection && !item.injectionPacking) ||
+        (isDryInjection && !item.dryInjectionUnitPack?.trim()) ||
+        (isDryInjection && !item.dryInjectionPackType) ||
+        (isDryInjection && !item.dryInjectionTrayPack) ||
+        (isDrySyrup && !item.cartonPacking) ||
+        (isDrySyrup && !item.drySyrupWaterType)
       );
     });
 
@@ -208,7 +222,7 @@ const QuoteForm = () => {
     const { name, value } = e.target;
     
     // For numeric fields, allow decimal input
-    if (name === 'taxPercent' || name === 'cylinderCharges' || name === 'inventoryCharges') {
+    if (name === 'taxPercent' || name === 'cylinderCharges' || name === 'numberOfCylinders' || name === 'inventoryCharges') {
       // Allow empty string, numbers, and decimal point
       if (value === '' || value === '.' || /^\d*\.?\d*$/.test(value)) {
         setFormData({ ...formData, [name]: value });
@@ -240,14 +254,42 @@ const QuoteForm = () => {
       newItems[index].packagingType = '';
       newItems[index].cartonPacking = '';
       newItems[index].customCartonPacking = '';
+      newItems[index].drySyrupWaterType = '';
       newItems[index].pvcType = '';
       newItems[index].customPvcType = '';
+      newItems[index].softGelatinColor = '';
+      newItems[index].injectionType = '';
+      newItems[index].injectionBoxPacking = '';
+      newItems[index].injectionPacking = '';
+      newItems[index].customInjectionPacking = '';
+      newItems[index].injectionPvcType = '';
+      newItems[index].dryInjectionUnitPack = '';
+      newItems[index].dryInjectionPackType = '';
+      newItems[index].dryInjectionTrayPack = '';
+    }
+    
+    // Reset injection fields if injection type changes
+    if (field === 'injectionType') {
+      // Reset Liquid Injection fields
+      newItems[index].injectionBoxPacking = '';
+      newItems[index].injectionPacking = '';
+      newItems[index].customInjectionPacking = '';
+      newItems[index].injectionPvcType = '';
+      // Reset Dry Injection fields
+      newItems[index].dryInjectionUnitPack = '';
+      newItems[index].dryInjectionPackType = '';
+      newItems[index].dryInjectionTrayPack = '';
     }
     
     // Reset PVC Type fields if packaging type changes away from Blister
     if (field === 'packagingType' && value !== 'Blister') {
       newItems[index].pvcType = '';
       newItems[index].customPvcType = '';
+    }
+    
+    // Reset injection PVC type if injection packing changes away from Blister Packing
+    if (field === 'injectionPacking' && value !== 'Blister Packing') {
+      newItems[index].injectionPvcType = '';
     }
 
     setFormData({ ...formData, items: newItems });
@@ -562,6 +604,7 @@ const QuoteForm = () => {
                               <SelectItem value="Drug">Drug</SelectItem>
                               <SelectItem value="Nutraceutical">Nutraceutical</SelectItem>
                               <SelectItem value="Cosmetics">Cosmetics</SelectItem>
+                              <SelectItem value="Ayurvedic">Ayurvedic</SelectItem>
                             </SelectContent>
                           </Select>
                         </div>
@@ -586,18 +629,96 @@ const QuoteForm = () => {
                           </Select>
                         </div>
 
-                        {/* Color of Soft Gelatin - Only for Soft Gelatine formulation */}
+                        {/* Colour of Soft Gelatin - Only for Soft Gelatine formulation */}
                         {item.formulationType === 'Soft Gelatine' && (
                           <div className="space-y-2">
                             <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                              Color of Soft Gelatin
+                              Colour of Soft Gelatin <span className="text-red-500">*</span>
                             </Label>
                             <Input
                               value={item.softGelatinColor || ''}
                               onChange={(e) => handleItemChange(index, 'softGelatinColor', e.target.value)}
-                              placeholder="Enter color (optional)"
+                              placeholder="Enter colour"
                               className="h-10"
                             />
+                          </div>
+                        )}
+
+                        {/* Injection Type - Only for Injection formulation */}
+                        {item.formulationType === 'Injection' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Injection Type <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={item.injectionType || ''}
+                              onValueChange={(value) => handleItemChange(index, 'injectionType', value)}
+                            >
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Select Injection Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Dry Injection">Dry Injection</SelectItem>
+                                <SelectItem value="Liquid Injection">Liquid Injection</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Dry Injection Fields - Unit Pack */}
+                        {item.formulationType === 'Injection' && item.injectionType === 'Dry Injection' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Unit Pack <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              value={item.dryInjectionUnitPack || ''}
+                              onChange={(e) => handleItemChange(index, 'dryInjectionUnitPack', e.target.value)}
+                              placeholder="Enter unit pack"
+                              className="h-10"
+                            />
+                          </div>
+                        )}
+
+                        {/* Dry Injection Fields - Pack Type */}
+                        {item.formulationType === 'Injection' && item.injectionType === 'Dry Injection' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Pack Type <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={item.dryInjectionPackType || ''}
+                              onValueChange={(value) => handleItemChange(index, 'dryInjectionPackType', value)}
+                            >
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Select Pack Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Water (WFI)">Water (WFI)</SelectItem>
+                                <SelectItem value="Without Water">Without Water</SelectItem>
+                              </SelectContent>
+                            </Select>
+                          </div>
+                        )}
+
+                        {/* Dry Injection Fields - Tray Pack */}
+                        {item.formulationType === 'Injection' && item.injectionType === 'Dry Injection' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Tray Pack <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={item.dryInjectionTrayPack || ''}
+                              onValueChange={(value) => handleItemChange(index, 'dryInjectionTrayPack', value)}
+                            >
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Select Tray Pack" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Required">Required</SelectItem>
+                                <SelectItem value="Not Required">Not Required</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         )}
                       </div>
@@ -714,11 +835,71 @@ const QuoteForm = () => {
                           </div>
                         )}
 
+                        {/* Liquid Injection Fields - Box Packing */}
+                        {item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Box Packing <span className="text-red-500">*</span>
+                            </Label>
+                            <Input
+                              value={item.injectionBoxPacking || ''}
+                              onChange={(e) => handleItemChange(index, 'injectionBoxPacking', e.target.value)}
+                              placeholder="Enter box packing"
+                              className="h-10"
+                            />
+                          </div>
+                        )}
+
+                        {/* Liquid Injection Fields - Injection Packing */}
+                        {item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Injection Packing <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={item.injectionPacking || ''}
+                              onValueChange={(value) => handleItemChange(index, 'injectionPacking', value)}
+                            >
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Select Injection Packing" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Tray Packing">Tray Packing</SelectItem>
+                                <SelectItem value="Blister Packing">Blister Packing</SelectItem>
+                                <SelectItem value="Custom">Custom</SelectItem>
+                              </SelectContent>
+                            </Select>
+                            {item.injectionPacking === 'Custom' && (
+                              <Input
+                                value={item.customInjectionPacking || ''}
+                                onChange={(e) => handleItemChange(index, 'customInjectionPacking', e.target.value)}
+                                placeholder="Enter custom injection packing"
+                                className="h-10 mt-2"
+                              />
+                            )}
+                          </div>
+                        )}
+
+                        {/* Liquid Injection PVC Type - Only for Blister Packing */}
+                        {item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection' && item.injectionPacking === 'Blister Packing' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              PVC Type
+                            </Label>
+                            <Input
+                              value={item.injectionPvcType || ''}
+                              onChange={(e) => handleItemChange(index, 'injectionPvcType', e.target.value)}
+                              placeholder="Enter PVC type (optional)"
+                              className="h-10"
+                            />
+                          </div>
+                        )}
+
                         {/* Carton Field - Only for Syrup/Suspension and Dry Syrup */}
                         {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) && (
                           <div className="space-y-2">
                              <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                              Carton
+                              Carton {item.formulationType === 'Dry Syrup' && <span className="text-red-500">*</span>}
                             </Label>
                             <Select
                                 value={item.cartonPacking}
@@ -741,6 +922,27 @@ const QuoteForm = () => {
                                 className="h-10 mt-2"
                               />
                             )}
+                          </div>
+                        )}
+
+                        {/* Water Type Field - Only for Dry Syrup */}
+                        {item.formulationType === 'Dry Syrup' && (
+                          <div className="space-y-2">
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              Water Type <span className="text-red-500">*</span>
+                            </Label>
+                            <Select
+                              value={item.drySyrupWaterType || ''}
+                              onValueChange={(value) => handleItemChange(index, 'drySyrupWaterType', value)}
+                            >
+                              <SelectTrigger className="w-full h-10">
+                                <SelectValue placeholder="Select Water Type" />
+                              </SelectTrigger>
+                              <SelectContent>
+                                <SelectItem value="Water">Water</SelectItem>
+                                <SelectItem value="Without Water">Without Water</SelectItem>
+                              </SelectContent>
+                            </Select>
                           </div>
                         )}
 
@@ -870,16 +1072,19 @@ const QuoteForm = () => {
 
                 <div className="flex items-center justify-between gap-2">
                   <Label htmlFor="taxPercent" className="text-muted-foreground">Tax (%)</Label>
-                  <Input
-                    id="taxPercent"
-                    type="text"
-                    inputMode="decimal"
-                    name="taxPercent"
-                    value={formData.taxPercent}
-                    onChange={handleChange}
-                    onKeyDown={handleNumericKeyDown}
-                    className="w-20 text-right"
-                  />
+                  <Select
+                    value={formData.taxPercent?.toString() || '0'}
+                    onValueChange={(value) => setFormData({ ...formData, taxPercent: parseFloat(value) })}
+                  >
+                    <SelectTrigger className="w-20">
+                      <SelectValue placeholder="Select" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value="0">0%</SelectItem>
+                      <SelectItem value="5">5%</SelectItem>
+                      <SelectItem value="18">18%</SelectItem>
+                    </SelectContent>
+                  </Select>
                 </div>
                 {taxOnSubtotal > 0 && (
                   <div className="flex justify-between">
@@ -888,18 +1093,40 @@ const QuoteForm = () => {
                   </div>
                 )}
 
-                <div className="flex items-center justify-between gap-2">
-                  <Label htmlFor="cylinderCharges" className="text-muted-foreground">Cylinder Charges</Label>
-                  <Input
-                    id="cylinderCharges"
-                    type="text"
-                    inputMode="decimal"
-                    name="cylinderCharges"
-                    value={formData.cylinderCharges}
-                    onChange={handleChange}
-                    onKeyDown={handleNumericKeyDown}
-                    className="w-24 text-right"
-                  />
+                <div className="space-y-1">
+                  <div className="flex items-center justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Label htmlFor="cylinderCharges" className="text-muted-foreground">Cylinder Charges</Label>
+                      <Select
+                        value={String(formData.numberOfCylinders || 0)}
+                        onValueChange={(value) => setFormData({ ...formData, numberOfCylinders: parseInt(value) })}
+                      >
+                        <SelectTrigger className="w-14 h-7 text-xs">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {[0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10].map(num => (
+                            <SelectItem key={num} value={String(num)}>{num}</SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+                    <Input
+                      id="cylinderCharges"
+                      type="text"
+                      inputMode="decimal"
+                      name="cylinderCharges"
+                      value={formData.cylinderCharges}
+                      onChange={handleChange}
+                      onKeyDown={handleNumericKeyDown}
+                      className="w-24 text-right"
+                    />
+                  </div>
+                  {formData.numberOfCylinders > 0 && (
+                    <p className="text-xs text-muted-foreground">
+                      ({formData.numberOfCylinders} Cylinder{formData.numberOfCylinders > 1 ? 's' : ''})
+                    </p>
+                  )}
                 </div>
 
                 <div className="flex items-center justify-between gap-2">

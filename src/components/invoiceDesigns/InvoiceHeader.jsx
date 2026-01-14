@@ -1,7 +1,7 @@
 // Shared Header Component for all designs
 const InvoiceHeader = ({ quote, companySettings }) => {
   return (
-    <div className="border-b-4 border-orange-500 pb-4 mb-6">
+    <div className="border-b-4 border-emerald-500 pb-4 mb-6">
       <div className="flex justify-between items-center">
         <div className="shrink-0">
           <img src="/logo/chemsrootlogo.png" alt="Company Logo" className="h-24 w-auto object-contain mb-2" />

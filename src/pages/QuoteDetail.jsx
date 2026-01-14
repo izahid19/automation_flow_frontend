@@ -377,11 +377,11 @@ const QuoteDetail = () => {
                           </div>
                         </div>
 
-                        {/* Color of Soft Gelatin - Only for Soft Gelatine formulation */}
+                        {/* Colour of Soft Gelatin - Only for Soft Gelatine formulation */}
                         {item.formulationType === 'Soft Gelatine' && (
                           <div className="space-y-2">
                             <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                              Color of Soft Gelatin
+                              Colour of Soft Gelatin
                             </Label>
                             <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
                               {item.softGelatinColor || '-'}
@@ -581,7 +581,12 @@ const QuoteDetail = () => {
                     )}
                     {(cylinderCharges || 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[var(--text-secondary)]">Cylinder Charges</span>
+                        <span className="text-[var(--text-secondary)]">
+                          Cylinder Charges
+                          {(quote.numberOfCylinders || 0) > 0 && (
+                            <span className="text-xs ml-1">({quote.numberOfCylinders} Cylinder{quote.numberOfCylinders > 1 ? 's' : ''})</span>
+                          )}
+                        </span>
                         <span>₹{quote.cylinderCharges?.toFixed(2)}</span>
                       </div>
                     )}
