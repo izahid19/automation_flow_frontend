@@ -22,10 +22,11 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                 <div className="col-span-7 space-y-2">
                   <div className="flex items-start justify-between">
                     <div className="flex-1">
+                      <span className="text-xs text-gray-500 font-medium">Brand Name:</span>
                       <h4 className="font-bold text-base text-gray-800">{item.brandName || '-'}</h4>
                     </div>
                     <div className="text-right ml-4">
-                      <p className="text-sm font-medium text-gray-600">MRP: ₹{(parseFloat(item.mrp) || 0).toFixed(2)}</p>
+                      <p className="text-sm font-medium text-gray-600">MRP per strip/unit: ₹{(parseFloat(item.mrp) || 0).toFixed(2)}</p>
                     </div>
                   </div>
                   
@@ -39,6 +40,10 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                   
                   {/* Specifications Grid */}
                   <div className="grid grid-cols-3 gap-2 mt-3 pt-3 border-t border-gray-200">
+                    <div>
+                      <span className="text-xs text-gray-500">Order Type:</span>
+                      <p className="text-xs font-medium">{item.orderType || '-'}</p>
+                    </div>
                     <div>
                       <span className="text-xs text-gray-500">Category:</span>
                       <p className="text-xs font-medium">{item.categoryType || '-'}</p>
@@ -69,14 +74,17 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                           : item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-')}
                       </p>
                     </div>
-                    <div>
-                      <span className="text-xs text-gray-500">
-                        {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type:' : 'Packaging Type:'}
-                      </span>
-                      <p className="text-xs font-medium">
-                        {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
-                      </p>
-                    </div>
+                    {/* Packaging Type - Hide for Dry Injection */}
+                    {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                      <div>
+                        <span className="text-xs text-gray-500">
+                          {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type:' : 'Packaging Type:'}
+                        </span>
+                        <p className="text-xs font-medium">
+                          {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
+                        </p>
+                      </div>
+                    )}
                     {hasBlister && item.packagingType === 'Blister' && (
                       <div>
                         <span className="text-xs text-gray-500">PVC Type:</span>

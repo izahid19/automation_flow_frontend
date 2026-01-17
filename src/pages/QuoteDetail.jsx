@@ -17,7 +17,8 @@ import {
   FileText,
   Eye,
   EyeOff,
-  Edit
+  Edit,
+  Mail as MailIcon
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import QuotePreview from '@/components/QuotePreview';
@@ -28,7 +29,7 @@ import { Label } from '../components/ui/label';
 const QuoteDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { user, isAdmin, isSalesExecutive, isMD, isDesigner } = useAuth();
+  const { user, isAdmin, isSalesExecutive, isManager, isMD, isDesigner, isAccountant } = useAuth();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const hasSoftGelatin = quote?.items?.some(item => item.formulationType === 'Soft Gelatine');
@@ -121,6 +122,46 @@ const QuoteDetail = () => {
     }
   };
 
+  const handleApproveManager = async () => {
+    setActionLoading(true);
+    try {
+      await quoteAPI.approveManager(id, { comments });
+      toast.success('Quote approved by Manager. Email sent to client with invoice.');
+      setComments('');
+      fetchQuote();
+    } catch (error) {
+      toast.error('Failed to approve');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleUpdateClientOrderStatus = async (status) => {
+    setActionLoading(true);
+    try {
+      await quoteAPI.updateClientOrderStatus(id, { clientOrderStatus: status });
+      toast.success(`Client order status updated to ${status}`);
+      fetchQuote();
+    } catch (error) {
+      toast.error('Failed to update client order status');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleConfirmAdvancePayment = async () => {
+    setActionLoading(true);
+    try {
+      await quoteAPI.confirmAdvancePayment(id);
+      toast.success('Advance payment confirmed. Sent to Designer.');
+      fetchQuote();
+    } catch (error) {
+      toast.error('Failed to confirm advance payment');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const handleApproveMD = async () => {
     setActionLoading(true);
     try {
@@ -173,16 +214,31 @@ const QuoteDetail = () => {
     }
   };
 
+  const handleResendEmail = async () => {
+    setActionLoading(true);
+    try {
+      await quoteAPI.resendEmail(id);
+      toast.success('Email resent to client successfully');
+      fetchQuote();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend email');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusMap = {
       draft: { label: 'Draft', class: 'badge-secondary' },
-      pending_se_approval: { label: 'Pending SE Approval', class: 'badge-warning' },
-      pending_md_approval: { label: 'Pending MD Approval', class: 'badge-warning' },
-      approved: { label: 'Approved', class: 'badge-success' },
+      submitted: { label: 'Submitted', class: 'badge-primary' },
+      pending_manager_approval: { label: 'Pending Manager Approval', class: 'badge-warning' },
+      approved: { label: 'Manager Approved', class: 'badge-success' },
       rejected: { label: 'Rejected', class: 'badge-error' },
-      design_pending: { label: 'Design Pending', class: 'badge-primary' },
-      design_approved: { label: 'Design Approved', class: 'badge-success' },
+      pending_accountant: { label: 'Pending Accountant', class: 'badge-warning' },
+      pending_designer: { label: 'Pending Designer', class: 'badge-primary' },
+      ready_for_po: { label: 'Ready for PO', class: 'badge-success' },
       po_created: { label: 'PO Created', class: 'badge-success' },
+      completed: { label: 'Completed', class: 'badge-success' },
     };
     const s = statusMap[status] || { label: status, class: 'badge-secondary' };
     return <span className={`badge ${s.class}`}>{s.label}</span>;
@@ -199,8 +255,13 @@ const QuoteDetail = () => {
   if (!quote) return null;
 
   const canApproveSE = (isAdmin || isSalesExecutive) && quote.status === 'pending_se_approval';
+  const canApproveManager = (isAdmin || isManager) && quote.status === 'pending_manager_approval';
   const canApproveMD = (isAdmin || isMD) && quote.status === 'pending_md_approval';
-  const canSubmit = quote.status === 'draft';
+  const canUpdateClientOrderStatus = (isAdmin || isManager) && quote.status === 'approved' && quote.clientOrderStatus === 'pending';
+  const canConfirmAdvancePayment = (isAdmin || isAccountant) && quote.status === 'pending_accountant';
+  const canUpdateDesign = (isAdmin || isDesigner) && quote.status === 'pending_designer';
+  const canSubmit = quote.status === 'draft' || quote.status === 'rejected';
+  const canResendEmail = (isAdmin || isManager) && quote.status !== 'draft' && quote.status !== 'rejected' && quote.status !== 'pending_manager_approval' && quote.clientEmail;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -249,6 +310,20 @@ const QuoteDetail = () => {
             )}
             Download PDF
           </button>
+          {canResendEmail && (
+            <button 
+              onClick={handleResendEmail} 
+              disabled={actionLoading}
+              className="btn btn-secondary"
+            >
+              {actionLoading ? (
+                <Loader2 className="w-5 h-5 animate-spin" />
+              ) : (
+                <MailIcon size={18} />
+              )}
+              Resend Email
+            </button>
+          )}
           {canSubmit && (
             <button onClick={handleSubmit} disabled={actionLoading} className="btn btn-primary">
               {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send size={18} />}
@@ -414,15 +489,17 @@ const QuoteDetail = () => {
                           </div>
                         )}
 
-                        {/* Packaging Type */}
-                        <div className={`space-y-2 ${!showPackingField ? 'md:col-span-2' : ''}`}>
-                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                            {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'}
-                          </Label>
-                          <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
-                            {packagingValue}
+                        {/* Packaging Type - Hide for Dry Injection */}
+                        {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                          <div className={`space-y-2 ${!showPackingField ? 'md:col-span-2' : ''}`}>
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'}
+                            </Label>
+                            <div className="h-10 px-3 py-2 bg-background border border-input rounded-md text-sm flex items-center">
+                              {packagingValue}
+                            </div>
                           </div>
-                        </div>
+                        )}
 
                         {/* PVC Type Field - Only for Blister packaging */}
                         {item.packagingType === 'Blister' && (
@@ -514,7 +591,7 @@ const QuoteDetail = () => {
           </Card>
 
           {/* Approval Actions */}
-          {(canApproveSE || canApproveMD) && (
+          {(canApproveSE || canApproveManager || canApproveMD) && (
             <div className="card">
               <h2 className="text-lg font-semibold mb-4">Approval Action</h2>
               <div className="space-y-4">
@@ -529,7 +606,7 @@ const QuoteDetail = () => {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={canApproveSE ? handleApproveSE : handleApproveMD}
+                    onClick={canApproveSE ? handleApproveSE : canApproveManager ? handleApproveManager : handleApproveMD}
                     disabled={actionLoading}
                     className="btn btn-success flex-1"
                   >
@@ -545,6 +622,122 @@ const QuoteDetail = () => {
                     Reject
                   </button>
                 </div>
+              </div>
+            </div>
+          )}
+
+          {/* Client Order Status (Manager) */}
+          {canUpdateClientOrderStatus && (
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4">Client Order Status</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Status</label>
+                  <select
+                    value={quote.clientOrderStatus || 'pending'}
+                    onChange={(e) => handleUpdateClientOrderStatus(e.target.value)}
+                    disabled={actionLoading}
+                    className="input"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
+                <p className="text-sm text-[var(--text-secondary)]">
+                  When set to "Approved", the quote will be sent to Accountant.
+                </p>
+              </div>
+            </div>
+          )}
+
+          {/* Accountant Actions */}
+          {canConfirmAdvancePayment && (
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4">Accountant Action</h2>
+              <div className="space-y-4">
+                <p className="text-sm text-[var(--text-secondary)]">
+                  Confirm that advance payment has been received from the client.
+                </p>
+                <button
+                  onClick={handleConfirmAdvancePayment}
+                  disabled={actionLoading}
+                  className="btn btn-success w-full"
+                >
+                  {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check size={18} />}
+                  Confirm Advance Payment Received
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Designer Actions */}
+          {canUpdateDesign && (
+            <div className="card">
+              <h2 className="text-lg font-semibold mb-4">Design Status</h2>
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-sm font-medium mb-2">Status</label>
+                  <select
+                    value={quote.designStatus || 'pending'}
+                    onChange={(e) => {
+                      const newStatus = e.target.value;
+                      quoteAPI.updateDesign(id, { 
+                        designStatus: newStatus,
+                        designNotes: quote.designNotes || ''
+                      }).then(() => {
+                        toast.success('Design status updated');
+                        fetchQuote();
+                      }).catch(() => {
+                        toast.error('Failed to update design status');
+                      });
+                    }}
+                    disabled={actionLoading}
+                    className="input"
+                  >
+                    <option value="pending">Pending</option>
+                    <option value="in_progress">In Progress</option>
+                    <option value="completed">Completed</option>
+                    <option value="approved">Approved</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium mb-2">Design Notes</label>
+                  <textarea
+                    value={quote.designNotes || ''}
+                    onChange={(e) => {
+                      quoteAPI.updateDesign(id, { 
+                        designStatus: quote.designStatus || 'pending',
+                        designNotes: e.target.value
+                      }).then(() => {
+                        fetchQuote();
+                      }).catch(() => {
+                        toast.error('Failed to update design notes');
+                      });
+                    }}
+                    placeholder="Add design notes..."
+                    className="input min-h-[80px]"
+                  />
+                </div>
+                {quote.designStatus === 'approved' && (
+                  <div className="mt-2">
+                    <p className="text-sm text-green-500 mb-1">
+                      ✓ Design approved. {quote.status === 'completed' ? 'Quote is completed.' : 'Quote is ready for Purchase Order creation.'}
+                    </p>
+                    {quote.designApprovedAt && (
+                      <p className="text-xs text-[var(--text-secondary)]">
+                        Approved on: {new Date(quote.designApprovedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} at {new Date(quote.designApprovedAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -629,52 +822,175 @@ const QuoteDetail = () => {
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Approval Status</h2>
             <div className="space-y-4">
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  quote.salesExecutiveApproval?.status === 'approved' 
-                    ? 'bg-green-500' 
-                    : quote.salesExecutiveApproval?.status === 'rejected'
-                    ? 'bg-red-500'
-                    : 'bg-[var(--surface-hover)]'
-                }`}>
-                  {quote.salesExecutiveApproval?.status === 'approved' ? (
-                    <Check size={16} className="text-white" />
-                  ) : quote.salesExecutiveApproval?.status === 'rejected' ? (
-                    <X size={16} className="text-white" />
-                  ) : (
-                    <span className="text-xs">SE</span>
-                  )}
+              {/* Manager Approval */}
+              {quote.managerApproval && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    quote.managerApproval?.status === 'approved' 
+                      ? 'bg-green-500' 
+                      : quote.managerApproval?.status === 'rejected'
+                      ? 'bg-red-500'
+                      : 'bg-[var(--surface-hover)]'
+                  }`}>
+                    {quote.managerApproval?.status === 'approved' ? (
+                      <Check size={16} className="text-white" />
+                    ) : quote.managerApproval?.status === 'rejected' ? (
+                      <X size={16} className="text-white" />
+                    ) : (
+                      <span className="text-xs">M</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Manager</p>
+                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                      {quote.managerApproval?.status || 'Pending'}
+                    </p>
+                    {quote.managerApproval?.approvedAt && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        {new Date(quote.managerApproval.approvedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} at {new Date(quote.managerApproval.approvedAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Sales Executive</p>
-                  <p className="text-xs text-[var(--text-secondary)] capitalize">
-                    {quote.salesExecutiveApproval?.status || 'Pending'}
-                  </p>
+              )}
+              
+              {/* Sales Executive Approval */}
+              {quote.salesExecutiveApproval && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    quote.salesExecutiveApproval?.status === 'approved' 
+                      ? 'bg-green-500' 
+                      : quote.salesExecutiveApproval?.status === 'rejected'
+                      ? 'bg-red-500'
+                      : 'bg-[var(--surface-hover)]'
+                  }`}>
+                    {quote.salesExecutiveApproval?.status === 'approved' ? (
+                      <Check size={16} className="text-white" />
+                    ) : quote.salesExecutiveApproval?.status === 'rejected' ? (
+                      <X size={16} className="text-white" />
+                    ) : (
+                      <span className="text-xs">SE</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">Sales Executive</p>
+                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                      {quote.salesExecutiveApproval?.status || 'Pending'}
+                    </p>
+                  </div>
                 </div>
-              </div>
-              <div className="flex items-center gap-3">
-                <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                  quote.mdApproval?.status === 'approved' 
-                    ? 'bg-green-500' 
-                    : quote.mdApproval?.status === 'rejected'
-                    ? 'bg-red-500'
-                    : 'bg-[var(--surface-hover)]'
-                }`}>
-                  {quote.mdApproval?.status === 'approved' ? (
-                    <Check size={16} className="text-white" />
-                  ) : quote.mdApproval?.status === 'rejected' ? (
-                    <X size={16} className="text-white" />
-                  ) : (
-                    <span className="text-xs">MD</span>
-                  )}
+              )}
+
+              {/* Accountant Approval */}
+              {quote.accountantApproval && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    quote.accountantApproval?.status === 'approved' 
+                      ? 'bg-green-500' 
+                      : quote.accountantApproval?.status === 'rejected'
+                      ? 'bg-red-500'
+                      : 'bg-[var(--surface-hover)]'
+                  }`}>
+                    {quote.accountantApproval?.status === 'approved' ? (
+                      <Check size={16} className="text-white" />
+                    ) : quote.accountantApproval?.status === 'rejected' ? (
+                      <X size={16} className="text-white" />
+                    ) : (
+                      <span className="text-xs">A</span>
+                    )}
+                  </div>
+                  <div className="flex-1">
+                    <p className="font-medium">Accountant</p>
+                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                      {quote.accountantApproval?.status || 'Pending'}
+                    </p>
+                    {quote.accountantApproval?.approvedAt && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        {new Date(quote.accountantApproval.approvedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} at {new Date(quote.accountantApproval.approvedAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                    )}
+                    {quote.advancePaymentReceivedAt && !quote.accountantApproval?.approvedAt && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        Payment confirmed: {new Date(quote.advancePaymentReceivedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} at {new Date(quote.advancePaymentReceivedAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                    )}
+                  </div>
                 </div>
-                <div>
-                  <p className="font-medium">Managing Director</p>
-                  <p className="text-xs text-[var(--text-secondary)] capitalize">
-                    {quote.mdApproval?.status || 'Pending'}
-                  </p>
+              )}
+
+              {/* MD Approval */}
+              {quote.mdApproval && (
+                <div className="flex items-center gap-3">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    quote.mdApproval?.status === 'approved' 
+                      ? 'bg-green-500' 
+                      : quote.mdApproval?.status === 'rejected'
+                      ? 'bg-red-500'
+                      : 'bg-[var(--surface-hover)]'
+                  }`}>
+                    {quote.mdApproval?.status === 'approved' ? (
+                      <Check size={16} className="text-white" />
+                    ) : quote.mdApproval?.status === 'rejected' ? (
+                      <X size={16} className="text-white" />
+                    ) : (
+                      <span className="text-xs">MD</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">Managing Director</p>
+                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                      {quote.mdApproval?.status || 'Pending'}
+                    </p>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* Client Order Status */}
+              {quote.status === 'approved' && (
+                <div className="flex items-center gap-3 pt-2 border-t border-[var(--border)]">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                    quote.clientOrderStatus === 'approved' 
+                      ? 'bg-green-500' 
+                      : 'bg-[var(--surface-hover)]'
+                  }`}>
+                    {quote.clientOrderStatus === 'approved' ? (
+                      <Check size={16} className="text-white" />
+                    ) : (
+                      <span className="text-xs">C</span>
+                    )}
+                  </div>
+                  <div>
+                    <p className="font-medium">Client Order Status</p>
+                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                      {quote.clientOrderStatus || 'Pending'}
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

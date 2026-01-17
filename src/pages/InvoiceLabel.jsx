@@ -18,7 +18,7 @@ const InvoiceLabel = () => {
     invoiceLabel: 'QUOTATION',
     companyPhone: '+917696275527',
     companyEmail: 'user@gmail.com',
-    invoiceDesign: 'design1',
+    invoiceDesign: 'design2',
     terms: 'Payment due within 30 days. All prices in INR.',
     bankDetails: '',
     advancePaymentNote: 'Please pay the advance amount to continue the process.',
@@ -27,7 +27,7 @@ const InvoiceLabel = () => {
     invoiceLabel: 'QUOTATION',
     companyPhone: '+917696275527',
     companyEmail: 'user@gmail.com',
-    invoiceDesign: 'design1',
+    invoiceDesign: 'design2',
     terms: 'Payment due within 30 days. All prices in INR.',
     bankDetails: '',
     advancePaymentNote: 'Please pay the advance amount to continue the process.',
@@ -89,7 +89,7 @@ const InvoiceLabel = () => {
           invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION',
           companyPhone: response.data.data.companyPhone || '+917696275527',
           companyEmail: response.data.data.companyEmail || 'user@gmail.com',
-          invoiceDesign: response.data.data.invoiceDesign || 'design1',
+          invoiceDesign: response.data.data.invoiceDesign || 'design2',
           terms: response.data.data.terms || 'Payment due within 30 days. All prices in INR.',
           bankDetails: response.data.data.bankDetails || '',
           advancePaymentNote: response.data.data.advancePaymentNote || 'Please pay the advance amount to continue the process.',
@@ -199,9 +199,9 @@ const InvoiceLabel = () => {
                   <SelectValue placeholder="Select Design" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="design1">Design 1 - Table Layout (Default)</SelectItem>
+                  {/* <SelectItem value="design1">Design 1 - Table Layout (Default)</SelectItem> - Commented out for future reference */}
                   <SelectItem value="design2">Design 2 - Card Layout</SelectItem>
-                  <SelectItem value="design3">Design 3 - Compact List</SelectItem>
+                  {/* Design 3 removed - no longer needed */}
                 </SelectContent>
               </Select>
               <p className="text-xs text-muted-foreground">
@@ -210,7 +210,7 @@ const InvoiceLabel = () => {
               
               {/* Design Preview Buttons */}
               <div className="flex gap-2 mt-3">
-                <Button
+                {/* <Button
                   type="button"
                   variant="outline"
                   size="sm"
@@ -219,7 +219,7 @@ const InvoiceLabel = () => {
                 >
                   <Eye className="w-4 h-4 mr-2" />
                   Preview Design 1
-                </Button>
+                </Button> - Commented out for future reference */}
                 <Button
                   type="button"
                   variant="outline"
@@ -230,16 +230,7 @@ const InvoiceLabel = () => {
                   <Eye className="w-4 h-4 mr-2" />
                   Preview Design 2
                 </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => handlePreview('design3')}
-                  className="flex-1"
-                >
-                  <Eye className="w-4 h-4 mr-2" />
-                  Preview Design 3
-                </Button>
+                {/* Design 3 preview button removed - no longer needed */}
               </div>
             </div>
 
@@ -349,7 +340,7 @@ Branch: Main Branch"
       {previewDesign && (
         <Card className="max-w-7xl">
           <CardHeader className="flex flex-row items-center justify-between">
-            <CardTitle>Preview - {previewDesign === 'design1' ? 'Design 1 (Table Layout)' : previewDesign === 'design2' ? 'Design 2 (Card Layout)' : 'Design 3 (Compact List)'}</CardTitle>
+            <CardTitle>Preview - Design 2 (Card Layout)</CardTitle>
             <Button variant="outline" size="sm" onClick={closePreview}>
               Close Preview
             </Button>

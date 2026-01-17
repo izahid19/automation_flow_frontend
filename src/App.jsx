@@ -16,6 +16,8 @@ import QuoteDetail from './pages/QuoteDetail';
 import Manufacturers from './pages/Manufacturers';
 import Users from './pages/Users';
 import InvoiceLabel from './pages/InvoiceLabel';
+import QuoteMailSettings from './pages/QuoteMailSettings';
+import CompletedOrders from './pages/CompletedOrders';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -122,7 +124,8 @@ function App() {
             <Route path="quotes/:id/edit" element={<QuoteForm />} />
             <Route path="quotes/:id" element={<QuoteDetail />} />
             <Route path="approvals" element={<Quotes />} />
-            <Route path="purchase-orders" element={<Quotes />} />
+            <Route path="purchase-orders" element={<CompletedOrders />} />
+            <Route path="purchase-orders/:id" element={<CompletedOrders />} />
             <Route path="manufacturers" element={<Manufacturers />} />
             <Route
               path="users"
@@ -137,6 +140,14 @@ function App() {
               element={
                 <ProtectedRoute allowedRoles={['admin']}>
                   <InvoiceLabel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="quote-mail-settings"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <QuoteMailSettings />
                 </ProtectedRoute>
               }
             />

@@ -65,8 +65,13 @@ const Design1 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                     ? (item.dryInjectionUnitPack || '-')
                     : item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-')}
                 </td>
+                {/* Packaging Type - Hide for Dry Injection */}
                 <td className="border border-gray-300 px-1 py-2 text-xs">
-                  {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
+                  {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                    <>
+                      {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
+                    </>
+                  )}
                 </td>
                 {hasBlister && (
                   <td className="border border-gray-300 px-1 py-2 text-xs">

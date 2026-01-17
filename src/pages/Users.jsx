@@ -112,6 +112,7 @@ const Users = () => {
       sales_executive: { label: 'Sales Executive', class: 'badge-primary' },
       manager: { label: 'Manager', class: 'badge-success' },
       designer: { label: 'Designer', class: 'badge-warning' },
+      accountant: { label: 'Accountant', class: 'badge-info' },
     };
     const r = roleMap[role] || { label: role, class: 'badge-secondary' };
     return <span className={`badge ${r.class}`}>{r.label}</span>;
@@ -178,7 +179,20 @@ const Users = () => {
                       </span>
                     </td>
                     <td className="text-[var(--text-secondary)]">
-                      {user.lastLogin ? new Date(user.lastLogin).toLocaleDateString('en-GB') : 'Never'}
+                      {user.lastLogin ? (() => {
+                        const date = new Date(user.lastLogin);
+                        const dateStr = date.toLocaleDateString('en-GB', { 
+                          day: '2-digit', 
+                          month: '2-digit', 
+                          year: 'numeric'
+                        });
+                        const timeStr = date.toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        });
+                        return `${dateStr} at ${timeStr}`;
+                      })() : 'Never'}
                     </td>
                     <td>
                       <div className="flex items-center gap-2">
@@ -260,6 +274,7 @@ const Users = () => {
                   <option value="sales_executive">Sales Executive</option>
                   <option value="manager">Manager</option>
                   <option value="designer">Designer</option>
+                  <option value="accountant">Accountant</option>
                   <option value="admin">Admin</option>
                 </select>
               </div>

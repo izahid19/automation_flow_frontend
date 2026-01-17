@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { settingsAPI } from '../services/api';
 import InvoiceHeader from './invoiceDesigns/InvoiceHeader';
 import InvoiceFooter from './invoiceDesigns/InvoiceFooter';
-import Design1 from './invoiceDesigns/Design1';
+// import Design1 from './invoiceDesigns/Design1'; // Commented out - keeping for future reference
 import Design2 from './invoiceDesigns/Design2';
-import Design3 from './invoiceDesigns/Design3';
+// Design 3 removed - no longer needed
 
 const QuotePreview = ({ quote, isDraft = false, designOverride = null }) => {
   const [companySettings, setCompanySettings] = useState({
@@ -12,7 +12,7 @@ const QuotePreview = ({ quote, isDraft = false, designOverride = null }) => {
     companyEmail: 'user@gmail.com',
     invoiceLabel: 'QUOTATION',
     advancePaymentNote: 'Please pay the advance amount to continue the process.',
-    invoiceDesign: 'design1'
+    invoiceDesign: 'design2'
   });
 
   useEffect(() => {
@@ -28,7 +28,7 @@ const QuotePreview = ({ quote, isDraft = false, designOverride = null }) => {
           companyEmail: response.data.data.companyEmail || 'user@gmail.com',
           invoiceLabel: response.data.data.invoiceLabel || 'QUOTATION',
           advancePaymentNote: response.data.data.advancePaymentNote || 'Please pay the advance amount to continue the process.',
-          invoiceDesign: response.data.data.invoiceDesign || 'design1'
+          invoiceDesign: response.data.data.invoiceDesign || 'design2'
         });
       }
     } catch (error) {
@@ -68,7 +68,7 @@ const QuotePreview = ({ quote, isDraft = false, designOverride = null }) => {
   const { subtotal, taxOnSubtotal, taxOnCharges, totalTax, total, advancePayment } = calculateTotals();
   
   const totals = { subtotal, taxOnSubtotal, taxOnCharges, totalTax, total, advancePayment };
-  const selectedDesign = designOverride || companySettings.invoiceDesign || 'design1';
+  const selectedDesign = designOverride || companySettings.invoiceDesign || 'design2';
 
   // Render the selected design
   const renderDesign = () => {
@@ -82,13 +82,11 @@ const QuotePreview = ({ quote, isDraft = false, designOverride = null }) => {
     };
 
     switch (selectedDesign) {
+      // case 'design1': // Commented out - keeping for future reference
+      //   return <Design1 {...commonProps} />;
       case 'design2':
-        return <Design2 {...commonProps} />;
-      case 'design3':
-        return <Design3 {...commonProps} />;
-      case 'design1':
       default:
-        return <Design1 {...commonProps} />;
+        return <Design2 {...commonProps} />;
     }
   };
 
@@ -112,7 +110,7 @@ const QuotePreview = ({ quote, isDraft = false, designOverride = null }) => {
           </div>
           <div>
             <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Created By</h3>
-            <p className="text-lg font-semibold text-gray-800">{quote?.createdBy?.email || 'N/A'}</p>
+            <p className="text-lg font-semibold text-gray-800">{quote?.createdByName || quote?.createdBy?.name || 'N/A'}</p>
           </div>
         </div>
       </div>

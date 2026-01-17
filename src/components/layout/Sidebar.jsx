@@ -8,13 +8,13 @@ import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import {
   LayoutDashboard,
   FileText,
-  CheckSquare,
   Package,
   Factory,
   Users,
   LogOut,
   Menu,
   Tag,
+  Mail,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -30,13 +30,13 @@ const Sidebar = () => {
   };
 
   const navItems = [
-    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'sales_executive', 'manager', 'designer'] },
-    { path: '/quotes', label: 'Quotes', icon: FileText, roles: ['admin', 'sales_executive', 'manager', 'designer'] },
-    { path: '/approvals', label: 'Approvals', icon: CheckSquare, roles: ['admin', 'sales_executive', 'manager'] },
-    { path: '/purchase-orders', label: 'Purchase Orders', icon: Package, roles: ['admin', 'sales_executive', 'manager'] },
+    { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'sales_executive', 'manager', 'designer', 'accountant'] },
+    { path: '/quotes', label: 'Quotes', icon: FileText, roles: ['admin', 'sales_executive', 'manager', 'designer', 'accountant'] },
+    { path: '/purchase-orders', label: 'Completed Orders', icon: Package, roles: ['admin', 'sales_executive', 'manager', 'accountant'] },
     { path: '/manufacturers', label: 'Manufacturers', icon: Factory, roles: ['admin', 'manager'] },
     { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
     { path: '/invoice-label', label: 'Invoice Label', icon: Tag, roles: ['admin'] },
+    { path: '/quote-mail-settings', label: 'Quote Mail Settings', icon: Mail, roles: ['admin', 'manager'] },
   ];
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(user?.role || ''));
@@ -92,6 +92,8 @@ const Sidebar = () => {
                 ? 'bg-green-500/20 text-green-400'
                 : user?.role === 'designer'
                 ? 'bg-yellow-500/20 text-yellow-400'
+                : user?.role === 'accountant'
+                ? 'bg-purple-500/20 text-purple-400'
                 : 'bg-blue-500/20 text-blue-400'
             }`}>
               {user?.role === 'sales_executive' ? 'Sales' : user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}

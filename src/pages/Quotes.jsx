@@ -2,8 +2,10 @@ import { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { quoteAPI } from '@/services/api';
 import { useSocket } from '@/context/SocketContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
@@ -17,7 +19,8 @@ import {
   Eye,
   Trash2,
   Download,
-  Edit
+  Edit,
+  Calendar
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -26,17 +29,118 @@ const Quotes = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customDateFrom, setCustomDateFrom] = useState('');
+  const [customDateTo, setCustomDateTo] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, quoteNumber: '' });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
   const { socket } = useSocket();
+  const { isAdmin } = useAuth();
+
+  // Calculate date ranges for filters
+  const getDateRange = useCallback((filterType) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    switch (filterType) {
+      case 'last_day':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+        const yesterdayEnd = new Date(yesterday);
+        yesterdayEnd.setHours(23, 59, 59, 999);
+        return { from: yesterday.toISOString().split('T')[0], to: yesterdayEnd.toISOString().split('T')[0] };
+      
+      case 'last_week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        weekAgo.setHours(0, 0, 0, 0);
+        return { from: weekAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+      
+      case 'last_month':
+        const currentMonth = new Date(today);
+        currentMonth.setDate(1); // First day of current month
+        currentMonth.setHours(0, 0, 0, 0);
+        
+        const lastMonthStart = new Date(currentMonth);
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1); // First day of previous month
+        
+        const lastMonthEnd = new Date(currentMonth);
+        lastMonthEnd.setDate(0); // Last day of previous month (day 0 of current month)
+        lastMonthEnd.setHours(23, 59, 59, 999);
+        
+        return { 
+          from: lastMonthStart.toISOString().split('T')[0], 
+          to: lastMonthEnd.toISOString().split('T')[0] 
+        };
+      
+      case 'custom':
+        if (customDateFrom) {
+          const toDate = customDateTo || today.toISOString().split('T')[0];
+          return { from: customDateFrom, to: toDate };
+        }
+        return null;
+      
+      default:
+        return null;
+    }
+  }, [customDateFrom, customDateTo]);
+
+  const getDateFilterLabel = (filterType) => {
+    const today = new Date();
+    
+    switch (filterType) {
+      case 'last_day':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        return `Last Day (${yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })})`;
+      
+      case 'last_week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        const weekAgoStr = weekAgo.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        const todayStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+        return `Last Week (${weekAgoStr} to ${todayStr})`;
+      
+      case 'last_month':
+        const currentMonth = new Date(today);
+        currentMonth.setDate(1); // First day of current month
+        const lastMonthStart = new Date(currentMonth);
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1); // First day of previous month
+        const monthName = lastMonthStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        return `Last Month (${monthName})`;
+      
+      case 'custom':
+        if (customDateFrom) {
+          const fromDate = new Date(customDateFrom);
+          const fromStr = fromDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          const toDate = customDateTo ? new Date(customDateTo) : today;
+          const toStr = toDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
+          return `Custom (${fromStr} to ${toStr})`;
+        }
+        return 'Custom Date';
+      
+      default:
+        return 'All Dates';
+    }
+  };
 
   const fetchQuotes = useCallback(async () => {
     try {
       const params = { page: pagination.page, limit: 10 };
       if (search) params.search = search;
       if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      
+      // Add date filtering
+      if (dateFilter && dateFilter !== 'all') {
+        const dateRange = getDateRange(dateFilter);
+        if (dateRange && dateRange.from) {
+          params.dateFrom = dateRange.from;
+          params.dateTo = dateRange.to;
+        }
+      }
 
       const response = await quoteAPI.getAll(params);
       setQuotes(response.data.data);
@@ -46,7 +150,7 @@ const Quotes = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, pagination.page]);
+  }, [search, statusFilter, dateFilter, customDateFrom, customDateTo, pagination.page, getDateRange]);
 
   useEffect(() => {
     fetchQuotes();
@@ -112,13 +216,15 @@ const Quotes = () => {
   const getStatusBadge = (status) => {
     const statusMap = {
       draft: { label: 'Draft', variant: 'secondary' },
-      pending_se_approval: { label: 'Pending SE', variant: 'outline' },
-      pending_md_approval: { label: 'Pending MD', variant: 'outline' },
-      approved: { label: 'Approved', variant: 'default' },
+      submitted: { label: 'Submitted', variant: 'outline' },
+      pending_manager_approval: { label: 'Pending Manager', variant: 'outline' },
+      approved: { label: 'Manager Approved', variant: 'default' },
       rejected: { label: 'Rejected', variant: 'destructive' },
-      design_pending: { label: 'Design Pending', variant: 'outline' },
-      design_approved: { label: 'Design Done', variant: 'default' },
+      pending_accountant: { label: 'Pending Accountant', variant: 'outline' },
+      pending_designer: { label: 'Pending Designer', variant: 'outline' },
+      ready_for_po: { label: 'Ready for PO', variant: 'default' },
       po_created: { label: 'PO Created', variant: 'default' },
+      completed: { label: 'Completed', variant: 'default' },
     };
     const s = statusMap[status] || { label: status, variant: 'secondary' };
     return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -143,30 +249,77 @@ const Quotes = () => {
       {/* Filters */}
       <Card>
         <CardContent className="p-4">
-          <div className="flex flex-col sm:flex-row gap-4">
-            <div className="relative flex-1">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by client name, email, or quote number..."
-                value={search}
-                onChange={(e) => setSearch(e.target.value)}
-                className="pl-10"
-              />
+          <div className="flex flex-col gap-4">
+            <div className="flex flex-col sm:flex-row gap-4">
+              <div className="relative flex-1">
+                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                <Input
+                  type="text"
+                  placeholder="Search by client name, email, or quote number..."
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  className="pl-10"
+                />
+              </div>
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="draft">Draft</SelectItem>
+                  <SelectItem value="submitted">Submitted</SelectItem>
+                  <SelectItem value="pending_manager_approval">Pending Manager</SelectItem>
+                  <SelectItem value="approved">Manager Approved</SelectItem>
+                  <SelectItem value="rejected">Rejected</SelectItem>
+                  <SelectItem value="pending_accountant">Pending Accountant</SelectItem>
+                  <SelectItem value="pending_designer">Pending Designer</SelectItem>
+                  <SelectItem value="ready_for_po">Ready for PO</SelectItem>
+                  <SelectItem value="po_created">PO Created</SelectItem>
+                  <SelectItem value="completed">Completed</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Dates" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Dates</SelectItem>
+                  <SelectItem value="last_day">{getDateFilterLabel('last_day')}</SelectItem>
+                  <SelectItem value="last_week">{getDateFilterLabel('last_week')}</SelectItem>
+                  <SelectItem value="last_month">{getDateFilterLabel('last_month')}</SelectItem>
+                  <SelectItem value="custom">{getDateFilterLabel('custom')}</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-full sm:w-48">
-                <SelectValue placeholder="All Status" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Status</SelectItem>
-                <SelectItem value="draft">Draft</SelectItem>
-                <SelectItem value="pending_se_approval">Pending SE</SelectItem>
-                <SelectItem value="pending_md_approval">Pending MD</SelectItem>
-                <SelectItem value="approved">Approved</SelectItem>
-                <SelectItem value="rejected">Rejected</SelectItem>
-              </SelectContent>
-            </Select>
+            {dateFilter === 'custom' && (
+              <div className="flex items-center gap-2 flex-wrap">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-sm">From Date:</Label>
+                <Input
+                  type="date"
+                  value={customDateFrom}
+                  onChange={(e) => {
+                    setCustomDateFrom(e.target.value);
+                    // If from date is after to date, reset to date
+                    if (customDateTo && e.target.value > customDateTo) {
+                      setCustomDateTo('');
+                    }
+                  }}
+                  className="w-48"
+                  max={customDateTo || new Date().toISOString().split('T')[0]}
+                />
+                <Label className="text-sm">To Date:</Label>
+                <Input
+                  type="date"
+                  value={customDateTo}
+                  onChange={(e) => setCustomDateTo(e.target.value)}
+                  className="w-48"
+                  min={customDateFrom}
+                  max={new Date().toISOString().split('T')[0]}
+                />
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>
@@ -231,13 +384,15 @@ const Quotes = () => {
                         >
                           <Eye size={16} />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/quotes/${quote._id}/edit`)}
-                        >
-                          <Edit size={16} />
-                        </Button>
+                        {(quote.status === 'draft' || quote.status === 'rejected' || isAdmin) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(`/quotes/${quote._id}/edit`)}
+                          >
+                            <Edit size={16} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
@@ -245,14 +400,16 @@ const Quotes = () => {
                         >
                           <Download size={16} />
                         </Button>
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => openDeleteConfirm(quote)}
-                          className="text-destructive hover:text-destructive"
-                        >
-                          <Trash2 size={16} />
-                        </Button>
+                        {isAdmin && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => openDeleteConfirm(quote)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
                       </div>
                     </TableCell>
                   </TableRow>

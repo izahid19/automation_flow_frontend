@@ -76,10 +76,10 @@ const QuoteForm = () => {
     clientAddress: '',
     items: [{ ...DEFAULT_ITEM }],
     discountPercent: 0,
-    taxPercent: 0,
+    taxPercent: 5, // Changed default from 0 to 5%
     taxPercentOnCharges: 18,
     cylinderCharges: 0,
-    numberOfCylinders: 0,
+    numberOfCylinders: 2, // Changed default from 0 to 2
     inventoryCharges: 0,
     terms: 'Payment due within 30 days. All prices in INR.',
     bankDetails: '',
@@ -768,42 +768,44 @@ const QuoteForm = () => {
                           </div>
                         )}
 
-                        {/* Packaging Type - Spanning remaining */}
-                        <div className={`space-y-2 ${!showPackingField ? 'md:col-span-2' : ''}`}>
-                          <Label className="text-xs font-medium text-white uppercase tracking-wider">
-                            {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'} <span className="text-red-500">*</span>
-                          </Label>
-                          {packagingOptions ? (
-                               <Select
-                                  value={item.packagingType}
-                                  onValueChange={(value) => handleItemChange(index, 'packagingType', value)}
-                              >
-                                  <SelectTrigger className="w-full h-10">
-                                      <SelectValue placeholder="Select Type" />
-                                  </SelectTrigger>
-                                  <SelectContent>
-                                      {packagingOptions.concat(['Custom']).map(opt => (
-                                          <SelectItem key={opt} value={opt}>{opt}</SelectItem>
-                                      ))}
-                                  </SelectContent>
-                              </Select>
-                          ) : (
-                               <Input
-                                  value={item.packagingType}
-                                  onChange={(e) => handleItemChange(index, 'packagingType', e.target.value)}
-                                  placeholder="Type"
-                                  className="h-10"
+                        {/* Packaging Type - Spanning remaining - Hide for Dry Injection */}
+                        {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                          <div className={`space-y-2 ${!showPackingField ? 'md:col-span-2' : ''}`}>
+                            <Label className="text-xs font-medium text-white uppercase tracking-wider">
+                              {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'} <span className="text-red-500">*</span>
+                            </Label>
+                            {packagingOptions ? (
+                                 <Select
+                                    value={item.packagingType}
+                                    onValueChange={(value) => handleItemChange(index, 'packagingType', value)}
+                                >
+                                    <SelectTrigger className="w-full h-10">
+                                        <SelectValue placeholder="Select Type" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {packagingOptions.concat(['Custom']).map(opt => (
+                                            <SelectItem key={opt} value={opt}>{opt}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            ) : (
+                                 <Input
+                                    value={item.packagingType}
+                                    onChange={(e) => handleItemChange(index, 'packagingType', e.target.value)}
+                                    placeholder="Type"
+                                    className="h-10"
+                                />
+                            )}
+                            {item.packagingType === 'Custom' && (
+                              <Input
+                                value={item.customPackagingType || ''}
+                                onChange={(e) => handleItemChange(index, 'customPackagingType', e.target.value)}
+                                placeholder="Enter custom packaging type"
+                                className="h-10 mt-2"
                               />
-                          )}
-                          {item.packagingType === 'Custom' && (
-                            <Input
-                              value={item.customPackagingType || ''}
-                              onChange={(e) => handleItemChange(index, 'customPackagingType', e.target.value)}
-                              placeholder="Enter custom packaging type"
-                              className="h-10 mt-2"
-                            />
-                          )}
-                        </div>
+                            )}
+                          </div>
+                        )}
 
                         {/* PVC Type Field - Only for Blister packaging */}
                         {item.packagingType === 'Blister' && (

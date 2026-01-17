@@ -55,8 +55,12 @@ export const quoteAPI = {
   submit: (id) => api.post(`/quotes/${id}/submit`),
   approveSE: (id, data) => api.post(`/quotes/${id}/approve-se`, data),
   rejectSE: (id, data) => api.post(`/quotes/${id}/reject-se`, data),
+  approveManager: (id, data) => api.post(`/quotes/${id}/approve-manager`, data),
   approveMD: (id, data) => api.post(`/quotes/${id}/approve-md`, data),
   rejectMD: (id, data) => api.post(`/quotes/${id}/reject-md`, data),
+  updateClientOrderStatus: (id, data) => api.post(`/quotes/${id}/client-order-status`, data),
+  confirmAdvancePayment: (id) => api.post(`/quotes/${id}/confirm-advance-payment`),
+  resendEmail: (id) => api.post(`/quotes/${id}/resend-email`),
   updateDesign: (id, data) => api.post(`/quotes/${id}/design-status`, data),
   getStats: () => api.get('/quotes/stats'),
   downloadPDF: (id) => api.get(`/quotes/${id}/pdf`, { responseType: 'blob' }),
@@ -88,6 +92,8 @@ export const settingsAPI = {
   getAll: () => api.get('/settings'),
   get: (key) => api.get(`/settings/${key}`),
   update: (settings) => api.put('/settings', { settings }),
+  getQuoteMailSettings: () => api.get('/settings/quote-mail'),
+  updateQuoteMailSettings: (data) => api.put('/settings/quote-mail', data),
 };
 
 export default api;

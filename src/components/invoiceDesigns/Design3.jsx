@@ -32,11 +32,14 @@ const Design3 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                         {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Unit Pack:' : 'Box Packing:'}
                       </span> {item.packing === 'Custom' ? (item.customPacking || '-') : (item.packing || '-')}
                     </div>
-                    <div>
-                      <span className="font-medium">
-                        {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type:' : 'Packaging Type:'}
-                      </span> {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
-                    </div>
+                    {/* Packaging Type - Hide for Dry Injection */}
+                    {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                      <div>
+                        <span className="font-medium">
+                          {['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type:' : 'Packaging Type:'}
+                        </span> {item.packagingType === 'Custom' ? (item.customPackagingType || '-') : (item.packagingType || '-')}
+                      </div>
+                    )}
                     {hasBlister && item.packagingType === 'Blister' && (
                       <div>
                         <span className="font-medium">PVC Type:</span> {item.pvcType === 'Custom' ? (item.customPvcType || '-') : (item.pvcType || '-')}
