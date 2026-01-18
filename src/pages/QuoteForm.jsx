@@ -186,7 +186,7 @@ const QuoteForm = () => {
     }
 
     const itemValidation = formData.items.some((item) => {
-      const isPharma = !['Injection', 'I.V/Fluid'].includes(item.formulationType);
+      const isPharma = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
       const isSoftGelatin = item.formulationType === 'Soft Gelatine';
       const isLiquidInjection = item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection';
       const isDryInjection = item.formulationType === 'Injection' && item.injectionType === 'Dry Injection';
@@ -514,7 +514,7 @@ const QuoteForm = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {formData.items.map((item, index) => {
-                const showPackingField = !['Injection', 'I.V/Fluid'].includes(item.formulationType);
+                const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
                 const packingOptions = PACKING_OPTIONS[item.formulationType] || [];
                 const packagingOptions = PACKAGING_OPTIONS[item.formulationType];
 

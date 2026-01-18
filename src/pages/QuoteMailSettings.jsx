@@ -110,10 +110,17 @@ const QuoteMailSettings = () => {
 
   const formatPreviewContent = (template, quote) => {
     const companyName = settings.companyName || 'Your Company';
+    // Generate sample items list
+    const sampleItems = '1. Dolo 650mg<br>2. Paracetamol 500mg<br>3. Amoxicillin 250mg';
+    // Calculate advance amount (35%)
+    const advanceAmount = (quote.totalAmount * 0.35).toFixed(2);
+    
     return template
       .replace(/{clientName}/g, quote.clientName)
       .replace(/{quoteNumber}/g, quote.quoteNumber)
+      .replace(/{items}/g, sampleItems)
       .replace(/{totalAmount}/g, quote.totalAmount?.toFixed(2) || '0.00')
+      .replace(/{advanceAmount}/g, advanceAmount)
       .replace(/{validUntil}/g, new Date(quote.validUntil).toLocaleDateString('en-GB', {
         day: '2-digit',
         month: '2-digit',
@@ -132,14 +139,59 @@ const QuoteMailSettings = () => {
       .replace(/{totalAmount}/g, quote.totalAmount?.toFixed(2) || '0.00');
   };
 
-  const defaultTemplate = `<h2>Dear {clientName},</h2>
-<p>Please find attached the approved quotation/invoice for your reference.</p>
-<p><strong>Quote Number:</strong> {quoteNumber}</p>
-<p><strong>Total Amount:</strong> ₹{totalAmount}</p>
-<p><strong>Valid Until:</strong> {validUntil}</p>
-<p>You can view the PDF <a href="{pdfUrl}">here</a>.</p>
-<br>
-<p>Best regards,<br>{companyName}</p>`;
+  const defaultTemplate = `<div style="font-family: Arial, sans-serif; max-width: 650px; margin: 0 auto; color: #333;">
+  <p style="font-size: 16px; margin-bottom: 20px;"><strong>Dear Sir,</strong></p>
+  
+  <p style="font-size: 14px; line-height: 1.6; margin-bottom: 15px;">
+    Please find the attached <strong>Proforma Invoice</strong> for your reference.
+  </p>
+  
+  <p style="font-size: 14px; line-height: 1.6; margin-bottom: 20px;">
+    Kindly ensure that the composition name, brand name and all the other necessary details mentioned in the proforma invoice are correct as per your requirement and PO.
+  </p>
+
+  <!-- Quote Summary Box -->
+  <div style="background-color: #f8f9fa; border-left: 4px solid #f97316; padding: 20px; margin: 25px 0; border-radius: 4px;">
+    <h3 style="margin: 0 0 15px 0; color: #f97316; font-size: 16px;">Quotation Summary</h3>
+    
+    <table style="width: 100%; border-collapse: collapse; margin-bottom: 15px;">
+      <tr>
+        <td style="padding: 8px 0; font-weight: 600; color: #555; width: 180px;">Quote Number:</td>
+        <td style="padding: 8px 0; color: #333;">{quoteNumber}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; font-weight: 600; color: #555;">Items:</td>
+        <td style="padding: 8px 0; color: #333;">{items}</td>
+      </tr>
+      <tr>
+        <td style="padding: 8px 0; font-weight: 600; color: #555;">Total Amount:</td>
+        <td style="padding: 8px 0; color: #333; font-size: 18px; font-weight: 700; color: #f97316;">₹{totalAmount}</td>
+      </tr>
+      <tr style="background-color: #fff3e0;">
+        <td style="padding: 12px 8px; font-weight: 600; color: #e65100;">Advance Payment (35%):</td>
+        <td style="padding: 12px 8px; font-size: 16px; font-weight: 700; color: #e65100;">₹{advanceAmount}</td>
+      </tr>
+    </table>
+  </div>
+
+  <div style="background-color: #fff3cd; border: 1px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 4px;">
+    <p style="margin: 0; font-size: 14px; line-height: 1.6; color: #856404;">
+      <strong>⚠️ Important Notice:</strong><br>
+      Please note, we shall not be responsible for any brand name, composition, or specification if the same is not mentioned in the PO.
+    </p>
+  </div>
+
+  <p style="font-size: 14px; line-height: 1.6; margin: 20px 0;">
+    <strong>Kindly confirm. Thank you.</strong>
+  </p>
+
+  <hr style="border: none; border-top: 1px solid #e0e0e0; margin: 30px 0;">
+
+  <p style="font-size: 14px; line-height: 1.6; margin-bottom: 5px;">
+    Best regards,<br>
+    <strong style="color: #f97316; font-size: 15px;">{companyName}</strong>
+  </p>
+</div>`;
 
   if (loading) {
     return (
@@ -264,7 +316,7 @@ const QuoteMailSettings = () => {
             <CardHeader>
               <CardTitle>Email Template</CardTitle>
               <CardDescription>
-                Configure the email body template. Use placeholders: {'{clientName}'}, {'{quoteNumber}'}, {'{totalAmount}'}, {'{validUntil}'}, {'{pdfUrl}'}, {'{companyName}'}
+                Configure the email body template. Use placeholders: {'{clientName}'}, {'{quoteNumber}'}, {'{items}'}, {'{totalAmount}'}, {'{advanceAmount}'}, {'{validUntil}'}, {'{pdfUrl}'}, {'{companyName}'}
               </CardDescription>
             </CardHeader>
             <CardContent>
@@ -283,7 +335,7 @@ const QuoteMailSettings = () => {
                   className="font-mono text-sm"
                 />
                 <p className="text-xs text-muted-foreground">
-                  Available placeholders: {'{clientName}'}, {'{quoteNumber}'}, {'{totalAmount}'}, {'{validUntil}'}, {'{pdfUrl}'}, {'{companyName}'}
+                  Available placeholders: {'{clientName}'}, {'{quoteNumber}'}, {'{items}'} (list of item names), {'{totalAmount}'}, {'{advanceAmount}'} (35%), {'{validUntil}'}, {'{pdfUrl}'}, {'{companyName}'}
                 </p>
               </div>
             </CardContent>

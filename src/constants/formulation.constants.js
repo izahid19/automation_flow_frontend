@@ -6,7 +6,6 @@ export const PACKING_OPTIONS = {
   'Syrup/Suspension': ['2ml', '4ml', '4x5ml', '10ml', '15ml', '30ml', '50ml', '60ml', '100ml', '110ml', '120ml', '150ml', '170ml', '200ml', '220ml', '250ml', '300ml', '450ml'],
   'Dry Syrup': ['2ml', '4ml', '4x5ml', '10ml', '15ml', '30ml', '50ml', '60ml', '100ml', '110ml', '120ml', '150ml', '170ml', '200ml', '220ml', '250ml', '300ml', '450ml'],
   'Ointment/Cream': ['5gm', '10gm', '15gm', '20gm', '30gm', '50gm'],
-  'Lotion/Soap': ['50gm', '75gm', '100gm', '125gm', '150gm', '200gm'],
   'Sachet': ['10x1gm', '20x1gm', '25x1gm', '30x1gm', '50x1gm', '10x3gm', '20x3gm', '10x5gm', '20x5gm', '10x7.5gm', '20x7.5gm', '10x1x8gm', '20x1x8gm'],
 };
 
@@ -18,7 +17,8 @@ export const PACKAGING_OPTIONS = {
   'Syrup/Suspension': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
   'Dry Syrup': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
   'Ointment/Cream': ['With carton', 'With metalic carton', 'With flap'],
-  'Lotion/Soap': ['With carton', 'With metalic carton', 'With flap'],
+  'Lotion': ['With carton', 'With metalic carton', 'With flap'],
+  'Soap': ['With carton', 'With metalic carton', 'With flap'],
   'Sachet': ['With carton'],
 };
 
@@ -32,8 +32,10 @@ export const CARTON_OPTIONS = {
 export const FORMULATION_TYPES = [
   ...Object.keys(PACKING_OPTIONS),
   'Injection',
-  'I.V/Fluid'
+  'I.V/Fluid',
+  'Lotion',
+  'Soap'
 ];
 
 // Formulations that don't require packing field
-export const NO_PACKING_FORMULATIONS = ['Injection', 'I.V/Fluid'];
+export const NO_PACKING_FORMULATIONS = ['Injection', 'I.V/Fluid', 'Lotion', 'Soap'];
