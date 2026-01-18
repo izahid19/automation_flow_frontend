@@ -622,7 +622,7 @@ const QuoteForm = () => {
                               <SelectValue placeholder="Select Formulation" />
                             </SelectTrigger>
                             <SelectContent>
-                              {Object.keys(PACKING_OPTIONS).concat(['Injection', 'I.V/Fluid']).map(type => (
+                              {FORMULATION_TYPES.map(type => (
                                    <SelectItem key={type} value={type}>{type}</SelectItem>
                               ))}
                             </SelectContent>

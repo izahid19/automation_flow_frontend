@@ -17,8 +17,6 @@ export const PACKAGING_OPTIONS = {
   'Syrup/Suspension': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
   'Dry Syrup': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
   'Ointment/Cream': ['With carton', 'With metalic carton', 'With flap'],
-  'Lotion': ['With carton', 'With metalic carton', 'With flap'],
-  'Soap': ['With carton', 'With metalic carton', 'With flap'],
   'Sachet': ['With carton'],
 };
 

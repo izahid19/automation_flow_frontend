@@ -5,9 +5,9 @@ const InvoiceHeader = ({ quote, companySettings }) => {
       <div className="flex justify-between items-center">
         <div className="shrink-0">
           <img src="/logo/chemsrootlogo.png" alt="Company Logo" className="h-24 w-auto object-contain mb-2" />
-          <div className="text-xs text-gray-600 leading-relaxed">
-            <p>📞 {companySettings.companyPhone}</p>
-            <p>✉️ {companySettings.companyEmail}</p>
+          <div className="text-sm text-gray-600 leading-relaxed">
+            <p><span className="font-semibold text-gray-600">Phone:</span> {companySettings.companyPhone}</p>
+            <p><span className="font-semibold text-gray-600">Email:</span> {companySettings.companyEmail}</p>
           </div>
         </div>
         <div className="flex-1 text-center">
@@ -21,7 +21,7 @@ const InvoiceHeader = ({ quote, companySettings }) => {
           <p className="text-sm text-gray-500 mt-2">
             Date: {quote?.createdAt ? new Date(quote.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
           </p>
-          <p className="text-xs text-gray-500">
+          <p className="text-sm text-gray-500">
             Time: {quote?.createdAt 
               ? new Date(quote.createdAt).toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
               : new Date().toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })
