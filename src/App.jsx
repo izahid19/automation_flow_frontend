@@ -18,6 +18,7 @@ import Users from './pages/Users';
 import InvoiceLabel from './pages/InvoiceLabel';
 import QuoteMailSettings from './pages/QuoteMailSettings';
 import CompletedOrders from './pages/CompletedOrders';
+import PurchaseOrderDetail from './pages/PurchaseOrderDetail';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -125,7 +126,7 @@ function App() {
             <Route path="quotes/:id" element={<QuoteDetail />} />
             <Route path="approvals" element={<Quotes />} />
             <Route path="purchase-orders" element={<CompletedOrders />} />
-            <Route path="purchase-orders/:id" element={<CompletedOrders />} />
+            <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
             <Route path="manufacturers" element={<Manufacturers />} />
             <Route
               path="users"

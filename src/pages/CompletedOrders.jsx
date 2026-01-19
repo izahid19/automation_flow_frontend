@@ -7,20 +7,31 @@ import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { 
   Search,
   Package,
   Loader2,
   Eye,
   Download,
+  Plus,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import axios from 'axios';
 
 const CompletedOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
+  const [showPOModal, setShowPOModal] = useState(false);
+  const [selectedQuote, setSelectedQuote] = useState(null);
+  const [manufacturers, setManufacturers] = useState([]);
+  const [selectedManufacturer, setSelectedManufacturer] = useState('');
+  const [poNotes, setPONotes] = useState('');
+  const [creatingPO, setCreatingPO] = useState(false);
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
 
@@ -56,15 +67,71 @@ const CompletedOrders = () => {
     }
   };
 
+  const fetchManufacturers = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.get('http://localhost:5000/api/manufacturers', {
+        headers: { Authorization: `Bearer ${token}` }
+      });
+      setManufacturers(response.data.data);
+    } catch (error) {
+      toast.error('Failed to load manufacturers');
+    }
+  };
+
+  const handleOpenPOModal = async (quote) => {
+    setSelectedQuote(quote);
+    setShowPOModal(true);
+    if (manufacturers.length === 0) {
+      await fetchManufacturers();
+    }
+  };
+
+  const handleCreatePO = async () => {
+    if (!selectedManufacturer) {
+      toast.error('Please select a manufacturer');
+      return;
+    }
+
+    setCreatingPO(true);
+    try {
+      const token = localStorage.getItem('token');
+      const response = await axios.post(
+        'http://localhost:5000/api/purchase-orders',
+        {
+          quoteId: selectedQuote._id,
+          manufacturerId: selectedManufacturer,
+          notes: poNotes,
+        },
+        {
+          headers: { Authorization: `Bearer ${token}` }
+        }
+      );
+
+      toast.success('Purchase Order created and email sent successfully!');
+      setShowPOModal(false);
+      setSelectedQuote(null);
+      setSelectedManufacturer('');
+      setPONotes('');
+      fetchOrders(); // Refresh the list
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to create Purchase Order');
+    } finally {
+      setCreatingPO(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     const statusMap = {
       draft: { label: 'Draft', variant: 'secondary' },
-      sent: { label: 'Sent', variant: 'outline' },
+      sent: { label: 'Sent to Client', variant: 'outline' },
       acknowledged: { label: 'Acknowledged', variant: 'outline' },
       in_production: { label: 'In Production', variant: 'default' },
       shipped: { label: 'Shipped', variant: 'default' },
       delivered: { label: 'Delivered', variant: 'default' },
-      completed: { label: 'Completed', variant: 'default' },
+      completed: { label: 'Ready for PO', variant: 'default' },
+      pending_accountant: { label: 'Payment Pending', variant: 'outline' },
+      pending_designer: { label: 'Design Pending', variant: 'outline' },
     };
     const s = statusMap[status] || { label: status, variant: 'secondary' };
     return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -114,7 +181,7 @@ const CompletedOrders = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO #</TableHead>
+                  <TableHead>Order #</TableHead>
                   <TableHead>Quote #</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Manufacturer</TableHead>
@@ -128,9 +195,13 @@ const CompletedOrders = () => {
                 {orders.map((order) => (
                   <TableRow key={order._id}>
                     <TableCell>
-                      <span className="text-primary font-medium">
-                        {order.poNumber}
-                      </span>
+                      {order.isPendingQuote ? (
+                        <span className="text-muted-foreground italic">Pending</span>
+                      ) : (
+                        <span className="text-primary font-medium">
+                          {order.poNumber}
+                        </span>
+                      )}
                     </TableCell>
                     <TableCell>
                       <span className="text-muted-foreground">
@@ -143,7 +214,9 @@ const CompletedOrders = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <p className="text-sm">{order.manufacturer?.name || 'N/A'}</p>
+                      <p className="text-sm">
+                        {order.manufacturer?.name || (order.isPendingQuote ? 'Not assigned' : 'N/A')}
+                      </p>
                     </TableCell>
                     <TableCell className="font-semibold">₹{order.totalAmount?.toFixed(2) || '0.00'}</TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
@@ -155,11 +228,30 @@ const CompletedOrders = () => {
                         <Button
                           variant="ghost"
                           size="icon"
-                          onClick={() => navigate(`/purchase-orders/${order._id}`)}
+                          onClick={() => {
+                            if (order.isPendingQuote) {
+                              // Navigate to quote detail page for pending quotes
+                              navigate(`/quotes/${order._id}`);
+                            } else {
+                              // Navigate to purchase order detail page
+                              navigate(`/purchase-orders/${order._id}`);
+                            }
+                          }}
                         >
                           <Eye size={16} />
                         </Button>
-                        {order.pdfUrl && (
+                        {order.needsPO && (
+                          <Button
+                            variant="default"
+                            size="sm"
+                            onClick={() => handleOpenPOModal(order)}
+                            className="gap-1"
+                          >
+                            <Plus size={14} />
+                            Create PO
+                          </Button>
+                        )}
+                        {!order.isPendingQuote && order.pdfUrl && (
                           <Button
                             variant="ghost"
                             size="icon"
@@ -202,6 +294,96 @@ const CompletedOrders = () => {
           )}
         </CardContent>
       </Card>
+
+      {/* Create Purchase Order Modal */}
+      <Dialog open={showPOModal} onOpenChange={setShowPOModal}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>Create Purchase Order</DialogTitle>
+            <DialogDescription>
+              Select a manufacturer and create a purchase order for quote {selectedQuote?.quote?.quoteNumber}
+            </DialogDescription>
+          </DialogHeader>
+
+          {selectedQuote && (
+            <div className="space-y-4">
+              {/* Quote Summary */}
+              <div className="bg-muted p-4 rounded-lg">
+                <h4 className="font-semibold mb-2">Quote Details</h4>
+                <div className="grid grid-cols-2 gap-2 text-sm">
+                  <div>
+                    <span className="text-muted-foreground">Quote Number:</span>
+                    <span className="ml-2 font-medium">{selectedQuote.quote?.quoteNumber}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Client:</span>
+                    <span className="ml-2 font-medium">{selectedQuote.quote?.clientName}</span>
+                  </div>
+                  <div>
+                    <span className="text-muted-foreground">Total Amount:</span>
+                    <span className="ml-2 font-medium">₹{selectedQuote.totalAmount?.toFixed(2)}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Manufacturer Selection */}
+              <div className="space-y-2">
+                <Label htmlFor="manufacturer">Select Manufacturer *</Label>
+                <select
+                  id="manufacturer"
+                  value={selectedManufacturer}
+                  onChange={(e) => setSelectedManufacturer(e.target.value)}
+                  className="flex h-10 w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background file:border-0 file:bg-transparent file:text-sm file:font-medium placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50"
+                >
+                  <option value="">-- Select Manufacturer --</option>
+                  {manufacturers.map((manufacturer) => (
+                    <option key={manufacturer._id} value={manufacturer._id}>
+                      {manufacturer.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Notes */}
+              <div className="space-y-2">
+                <Label htmlFor="notes">Notes (Optional)</Label>
+                <Textarea
+                  id="notes"
+                  placeholder="Add any notes for this purchase order..."
+                  value={poNotes}
+                  onChange={(e) => setPONotes(e.target.value)}
+                  rows={3}
+                />
+              </div>
+            </div>
+          )}
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setShowPOModal(false);
+                setSelectedQuote(null);
+                setSelectedManufacturer('');
+                setPONotes('');
+              }}
+              disabled={creatingPO}
+            >
+              Cancel
+            </Button>
+            <Button onClick={handleCreatePO} disabled={creatingPO || !selectedManufacturer}>
+              {creatingPO ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                <>Create PO & Send Email</>
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

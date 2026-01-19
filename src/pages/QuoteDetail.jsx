@@ -818,30 +818,60 @@ const QuoteDetail = () => {
             </div>
           </div>
 
-          {/* Approval Status */}
+          {/* Approval History */}
           <div className="card">
-            <h2 className="text-lg font-semibold mb-4">Approval Status</h2>
-            <div className="space-y-4">
+            <h2 className="text-lg font-semibold mb-4">Approval History</h2>
+            <div className="space-y-3">
+              {/* Quote Created */}
+              <div className="flex gap-3">
+                <div className="flex flex-col items-center">
+                  <div className="w-8 h-8 rounded-full flex items-center justify-center bg-blue-500">
+                    <Check size={16} className="text-white" />
+                  </div>
+                  <div className="w-0.5 h-full bg-border mt-2" />
+                </div>
+                <div className="flex-1 pb-4">
+                  <p className="font-medium">Quote Created</p>
+                  <p className="text-xs text-[var(--text-secondary)]">
+                    Created by {quote.createdByName || 'Sales Person'}
+                  </p>
+                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    {new Date(quote.createdAt).toLocaleDateString('en-GB', {
+                      day: '2-digit',
+                      month: '2-digit',
+                      year: 'numeric'
+                    })} at {new Date(quote.createdAt).toLocaleTimeString('en-US', {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                      hour12: true
+                    })}
+                  </p>
+                </div>
+              </div>
+
               {/* Manager Approval */}
               {quote.managerApproval && (
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    quote.managerApproval?.status === 'approved' 
-                      ? 'bg-green-500' 
-                      : quote.managerApproval?.status === 'rejected'
-                      ? 'bg-red-500'
-                      : 'bg-[var(--surface-hover)]'
-                  }`}>
-                    {quote.managerApproval?.status === 'approved' ? (
-                      <Check size={16} className="text-white" />
-                    ) : quote.managerApproval?.status === 'rejected' ? (
-                      <X size={16} className="text-white" />
-                    ) : (
-                      <span className="text-xs">M</span>
-                    )}
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      quote.managerApproval?.status === 'approved' 
+                        ? 'bg-green-500' 
+                        : quote.managerApproval?.status === 'rejected'
+                        ? 'bg-red-500'
+                        : 'bg-gray-500'
+                    }`}>
+                      {quote.managerApproval?.status === 'approved' ? (
+                        <Check size={16} className="text-white" />
+                      ) : quote.managerApproval?.status === 'rejected' ? (
+                        <X size={16} className="text-white" />
+                      ) : (
+                        <span className="text-xs text-white">M</span>
+                      )}
+                    </div>
+                    <div className="w-0.5 h-full bg-border mt-2" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Manager</p>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium">Manager Approval</p>
                     <p className="text-xs text-[var(--text-secondary)] capitalize">
                       {quote.managerApproval?.status || 'Pending'}
                     </p>
@@ -858,59 +888,91 @@ const QuoteDetail = () => {
                         })}
                       </p>
                     )}
+                    {quote.managerApproval?.comments && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 italic">
+                        Comments: {quote.managerApproval.comments}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
-              
-              {/* Sales Executive Approval */}
-              {quote.salesExecutiveApproval && (
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    quote.salesExecutiveApproval?.status === 'approved' 
-                      ? 'bg-green-500' 
-                      : quote.salesExecutiveApproval?.status === 'rejected'
-                      ? 'bg-red-500'
-                      : 'bg-[var(--surface-hover)]'
-                  }`}>
-                    {quote.salesExecutiveApproval?.status === 'approved' ? (
-                      <Check size={16} className="text-white" />
-                    ) : quote.salesExecutiveApproval?.status === 'rejected' ? (
-                      <X size={16} className="text-white" />
-                    ) : (
-                      <span className="text-xs">SE</span>
-                    )}
+
+              {/* Client Approval */}
+              {(quote.status === 'approved' || quote.status === 'pending_accountant' || quote.status === 'pending_designer' || quote.status === 'completed') && (
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      quote.clientOrderStatus === 'approved' 
+                        ? 'bg-green-500' 
+                        : 'bg-gray-500'
+                    }`}>
+                      {quote.clientOrderStatus === 'approved' ? (
+                        <Check size={16} className="text-white" />
+                      ) : (
+                        <span className="text-xs text-white">C</span>
+                      )}
+                    </div>
+                    <div className="w-0.5 h-full bg-border mt-2" />
                   </div>
-                  <div>
-                    <p className="font-medium">Sales Executive</p>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium">Client Order Confirmation</p>
                     <p className="text-xs text-[var(--text-secondary)] capitalize">
-                      {quote.salesExecutiveApproval?.status || 'Pending'}
+                      {quote.clientOrderStatus || 'Pending'}
                     </p>
+                    {quote.clientOrderApprovedBy && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        Approved by: {quote.clientOrderApprovedBy?.name || 'Unknown'}
+                      </p>
+                    )}
+                    {quote.clientOrderApprovedAt && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        {new Date(quote.clientOrderApprovedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} at {new Date(quote.clientOrderApprovedAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
               {/* Accountant Approval */}
-              {quote.accountantApproval && (
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    quote.accountantApproval?.status === 'approved' 
-                      ? 'bg-green-500' 
-                      : quote.accountantApproval?.status === 'rejected'
-                      ? 'bg-red-500'
-                      : 'bg-[var(--surface-hover)]'
-                  }`}>
-                    {quote.accountantApproval?.status === 'approved' ? (
-                      <Check size={16} className="text-white" />
-                    ) : quote.accountantApproval?.status === 'rejected' ? (
-                      <X size={16} className="text-white" />
-                    ) : (
-                      <span className="text-xs">A</span>
-                    )}
+              {(quote.status === 'pending_accountant' || quote.status === 'pending_designer' || quote.status === 'completed' || quote.accountantApproval) && (
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      quote.accountantApproval?.status === 'approved' 
+                        ? 'bg-green-500' 
+                        : quote.accountantApproval?.status === 'rejected'
+                        ? 'bg-red-500'
+                        : quote.status === 'pending_accountant'
+                        ? 'bg-yellow-500 animate-pulse'
+                        : 'bg-gray-500'
+                    }`}>
+                      {quote.accountantApproval?.status === 'approved' ? (
+                        <Check size={16} className="text-white" />
+                      ) : quote.accountantApproval?.status === 'rejected' ? (
+                        <X size={16} className="text-white" />
+                      ) : (
+                        <span className="text-xs text-white">A</span>
+                      )}
+                    </div>
+                    <div className="w-0.5 h-full bg-border mt-2" />
                   </div>
-                  <div className="flex-1">
-                    <p className="font-medium">Accountant</p>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium">
+                      Accountant Approval
+                      {quote.status === 'pending_accountant' && (
+                        <span className="ml-2 text-xs text-yellow-500">(In Progress)</span>
+                      )}
+                    </p>
                     <p className="text-xs text-[var(--text-secondary)] capitalize">
-                      {quote.accountantApproval?.status || 'Pending'}
+                      {quote.accountantApproval?.status || (quote.status === 'pending_accountant' ? 'Pending' : 'Not Started')}
                     </p>
                     {quote.accountantApproval?.approvedAt && (
                       <p className="text-xs text-[var(--text-secondary)] mt-1">
@@ -925,9 +987,9 @@ const QuoteDetail = () => {
                         })}
                       </p>
                     )}
-                    {quote.advancePaymentReceivedAt && !quote.accountantApproval?.approvedAt && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1">
-                        Payment confirmed: {new Date(quote.advancePaymentReceivedAt).toLocaleDateString('en-GB', {
+                    {quote.advancePaymentReceivedAt && (
+                      <p className="text-xs text-green-500 mt-1">
+                        ✓ Payment confirmed: {new Date(quote.advancePaymentReceivedAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: '2-digit',
                           year: 'numeric'
@@ -942,51 +1004,71 @@ const QuoteDetail = () => {
                 </div>
               )}
 
-              {/* MD Approval */}
-              {quote.mdApproval && (
-                <div className="flex items-center gap-3">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    quote.mdApproval?.status === 'approved' 
-                      ? 'bg-green-500' 
-                      : quote.mdApproval?.status === 'rejected'
-                      ? 'bg-red-500'
-                      : 'bg-[var(--surface-hover)]'
-                  }`}>
-                    {quote.mdApproval?.status === 'approved' ? (
-                      <Check size={16} className="text-white" />
-                    ) : quote.mdApproval?.status === 'rejected' ? (
-                      <X size={16} className="text-white" />
-                    ) : (
-                      <span className="text-xs">MD</span>
-                    )}
+              {/* Designer Approval */}
+              {(quote.status === 'pending_designer' || quote.status === 'completed' || quote.designStatus !== 'pending') && (
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                      quote.designStatus === 'approved' 
+                        ? 'bg-green-500' 
+                        : quote.designStatus === 'completed'
+                        ? 'bg-blue-500'
+                        : quote.status === 'pending_designer'
+                        ? 'bg-yellow-500 animate-pulse'
+                        : 'bg-gray-500'
+                    }`}>
+                      {quote.designStatus === 'approved' ? (
+                        <Check size={16} className="text-white" />
+                      ) : (
+                        <span className="text-xs text-white">D</span>
+                      )}
+                    </div>
+                    {quote.status === 'completed' && <div className="w-0.5 h-full bg-border mt-2" />}
                   </div>
-                  <div>
-                    <p className="font-medium">Managing Director</p>
-                    <p className="text-xs text-[var(--text-secondary)] capitalize">
-                      {quote.mdApproval?.status || 'Pending'}
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium">
+                      Designer Status
+                      {quote.status === 'pending_designer' && (
+                        <span className="ml-2 text-xs text-yellow-500">(In Progress)</span>
+                      )}
                     </p>
+                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                      {quote.designStatus || 'Pending'}
+                    </p>
+                    {quote.designApprovedAt && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                        Approved: {new Date(quote.designApprovedAt).toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric'
+                        })} at {new Date(quote.designApprovedAt).toLocaleTimeString('en-US', {
+                          hour: '2-digit',
+                          minute: '2-digit',
+                          hour12: true
+                        })}
+                      </p>
+                    )}
+                    {quote.designNotes && (
+                      <p className="text-xs text-[var(--text-secondary)] mt-1 italic">
+                        Notes: {quote.designNotes}
+                      </p>
+                    )}
                   </div>
                 </div>
               )}
 
-              {/* Client Order Status */}
-              {quote.status === 'approved' && (
-                <div className="flex items-center gap-3 pt-2 border-t border-[var(--border)]">
-                  <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                    quote.clientOrderStatus === 'approved' 
-                      ? 'bg-green-500' 
-                      : 'bg-[var(--surface-hover)]'
-                  }`}>
-                    {quote.clientOrderStatus === 'approved' ? (
+              {/* Completed Status */}
+              {quote.status === 'completed' && (
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500">
                       <Check size={16} className="text-white" />
-                    ) : (
-                      <span className="text-xs">C</span>
-                    )}
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-medium">Client Order Status</p>
-                    <p className="text-xs text-[var(--text-secondary)] capitalize">
-                      {quote.clientOrderStatus || 'Pending'}
+                  <div className="flex-1">
+                    <p className="font-medium text-green-500">Order Completed</p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      All approvals received
                     </p>
                   </div>
                 </div>
