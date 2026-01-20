@@ -15,12 +15,17 @@ import {
   User,
   Calendar,
   FileText,
+  Eye,
+  EyeOff,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import PurchaseOrderPreview from '@/components/PurchaseOrderPreview';
+import { Label } from '@/components/ui/label';
 
 const PurchaseOrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAdmin } = useAuth();
@@ -106,17 +111,42 @@ const PurchaseOrderDetail = () => {
             <p className="text-muted-foreground">{order.poNumber}</p>
           </div>
         </div>
+
         <div className="flex gap-2">
+          <Button
+            variant={showPreview ? "default" : "outline"}
+            onClick={() => setShowPreview(!showPreview)}
+            className="gap-2"
+          >
+            {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
+            {showPreview ? 'Close Preview' : 'Preview PO'}
+          </Button>
           {order.pdfUrl && (
-            <Button onClick={handleDownloadPDF}>
-              <Download className="w-4 h-4 mr-2" />
+            <Button onClick={handleDownloadPDF} variant="outline" className="gap-2">
+              <Download className="w-4 h-4" />
               Download PDF
             </Button>
           )}
         </div>
       </div>
 
-      {/* Order Summary */}
+      {showPreview ? (
+        <PurchaseOrderPreview
+          formData={{
+            quoteNumber: order.quoteNumber || order.quote?.quoteNumber,
+            notes: order.notes,
+            hidePurchaseRate: order.hidePurchaseRate
+          }}
+          items={order.items}
+          manufacturer={order.manufacturer}
+          totals={{
+            subtotal: order.subtotal || 0,
+            total: order.totalAmount || 0
+          }}
+        />
+      ) : (
+        <div className="space-y-6">
+          {/* Order Summary */}
       <Card>
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
@@ -125,10 +155,14 @@ const PurchaseOrderDetail = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
             <div>
               <p className="text-sm text-muted-foreground mb-1">PO Number</p>
               <p className="font-semibold text-primary">{order.poNumber}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
+              <p className="font-semibold">{order.quoteNumber || order.quote?.quoteNumber || 'N/A'}</p>
             </div>
             <div>
               <p className="text-sm text-muted-foreground mb-1">Status</p>
@@ -393,43 +427,126 @@ const PurchaseOrderDetail = () => {
         <CardHeader>
           <CardTitle>Purchase Order Items</CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="border rounded-lg overflow-hidden">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead className="w-8">#</TableHead>
-                  <TableHead>Brand Name</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead className="text-center">Quantity</TableHead>
-                  {!order.hidePurchaseRate && (
-                    <>
-                      <TableHead className="text-right">Rate</TableHead>
-                      <TableHead className="text-right">Amount</TableHead>
-                    </>
-                  )}
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {order.items?.map((item, index) => (
-                  <TableRow key={index}>
-                    <TableCell className="font-medium">{index + 1}</TableCell>
-                    <TableCell className="font-medium">{item.brandName || item.name}</TableCell>
-                    <TableCell>{item.description || '-'}</TableCell>
-                    <TableCell className="text-center">{item.quantity}</TableCell>
-                    {!order.hidePurchaseRate && (
-                      <>
-                        <TableCell className="text-right">₹{item.rate?.toFixed(2)}</TableCell>
-                        <TableCell className="text-right font-semibold">
-                          ₹{(item.quantity * item.rate).toFixed(2)}
-                        </TableCell>
-                      </>
-                    )}
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
-          </div>
+        <CardContent className="space-y-4">
+          {order.items?.map((item, index) => {
+             const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
+             
+             // Helper to render read-only field
+             const ReadOnlyField = ({ label, value }) => (
+               <div className="space-y-1.5">
+                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                   {label}
+                 </Label>
+                 <div className="text-sm font-medium px-3 py-2 bg-muted/30 rounded-md border border-border/20 min-h-[38px] flex items-center">
+                   {value || '-'}
+                 </div>
+               </div>
+             );
+
+             return (
+               <Card key={index} className="relative border border-border/50 bg-card">
+                 <CardContent className="pt-6 space-y-6">
+                   {/* Item Header */}
+                   <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                     <div className="flex items-center gap-3">
+                       <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                         {index + 1}
+                       </span>
+                       <span className="font-semibold text-foreground">Product Details</span>
+                     </div>
+                   </div>
+
+                   <div className="space-y-6">
+                     {/* Product Specifications Section */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                       <ReadOnlyField label="Brand Name" value={item.brandName} />
+                       <ReadOnlyField label="Order Type" value={item.orderType} />
+                       <ReadOnlyField label="Category" value={item.categoryType} />
+                       <ReadOnlyField label="Formulation" value={item.formulationType} />
+
+                       {/* Colour of Soft Gelatin */}
+                       {item.formulationType === 'Soft Gelatine' && (
+                         <ReadOnlyField label="Colour of Soft Gelatin" value={item.softGelatinColor} />
+                       )}
+
+                       {/* Injection Type */}
+                       {item.formulationType === 'Injection' && (
+                         <ReadOnlyField label="Injection Type" value={item.injectionType} />
+                       )}
+
+                       {/* Dry Injection fields */}
+                       {item.formulationType === 'Injection' && item.injectionType === 'Dry Injection' && (
+                         <>
+                           <ReadOnlyField label="Unit Pack" value={item.dryInjectionUnitPack} />
+                           <ReadOnlyField label="Pack Type" value={item.dryInjectionPackType} />
+                           <ReadOnlyField label="Tray Pack" value={item.dryInjectionTrayPack} />
+                         </>
+                       )}
+                     </div>
+
+                     {/* Technical Specs Section */}
+                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                       {/* Composition - Spans 2 cols */}
+                       <div className="md:col-span-2">
+                          <ReadOnlyField label="Composition" value={item.composition} />
+                       </div>
+
+                       {/* Packing */}
+                       {showPackingField && (
+                         <ReadOnlyField 
+                           label={['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Unit Pack' : 'Box Packing'}
+                           value={item.packing === 'Custom' ? item.customPacking : item.packing}
+                         />
+                       )}
+
+                       {/* Packaging Type */}
+                       {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                         <div className={!showPackingField ? 'md:col-span-2' : ''}>
+                           <ReadOnlyField 
+                             label={['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'}
+                             value={item.packagingType === 'Custom' ? item.customPackagingType : item.packagingType}
+                           />
+                         </div>
+                       )}
+
+                       {/* PVC Type */}
+                       {item.packagingType === 'Blister' && (
+                         <div className="md:col-span-2">
+                           <ReadOnlyField 
+                             label="PVC Type"
+                             value={item.pvcType === 'Custom' ? item.customPvcType : item.pvcType}
+                           />
+                         </div>
+                       )}
+                       
+                       {/* Specification */}
+                       <div className="md:col-span-2">
+                          <ReadOnlyField label="Specification" value={item.specification} />
+                       </div>
+
+                       <ReadOnlyField label="Quantity" value={item.quantity} />
+                       
+                       {!order.hidePurchaseRate && (
+                         <>
+                         <ReadOnlyField label="Rate (₹)" value={item.rate} />
+                         <ReadOnlyField label="MRP per strip/unit (₹)" value={item.mrp} />
+                         
+                         <div className="space-y-1.5">
+                           <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                             Amount
+                           </Label>
+                           <div className="text-sm font-medium px-3 py-2 bg-muted/50 rounded-md border border-border/20 min-h-[38px] flex items-center text-primary">
+                             {`₹${((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)).toFixed(2)}`}
+                           </div>
+                         </div>
+                         </>
+                       )}
+                     </div>
+                   </div>
+                 </CardContent>
+               </Card>
+             );
+          })}
 
           {!order.hidePurchaseRate && (
             <div className="mt-4 flex justify-end">
@@ -460,6 +577,8 @@ const PurchaseOrderDetail = () => {
             <p className="text-sm whitespace-pre-wrap">{order.notes}</p>
           </CardContent>
         </Card>
+      )}
+        </div>
       )}
     </div>
   );

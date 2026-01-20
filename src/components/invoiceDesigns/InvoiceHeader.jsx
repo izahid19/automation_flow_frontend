@@ -14,10 +14,7 @@ const InvoiceHeader = ({ quote, companySettings }) => {
           <h1 className="text-3xl font-bold text-gray-800">{companySettings.invoiceLabel}</h1>
         </div>
         <div className="text-right shrink-0 min-w-[180px]">
-          <p className="text-sm text-gray-500">Order Number</p>
-          <p className="text-lg font-semibold text-gray-700">
-            {quote?.quoteNumber || 'CR-XXXX-XXXX'}
-          </p>
+
           <p className="text-sm text-gray-500 mt-2">
             Date: {quote?.createdAt ? new Date(quote.createdAt).toLocaleDateString('en-GB') : new Date().toLocaleDateString('en-GB')}
           </p>

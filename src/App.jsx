@@ -18,7 +18,9 @@ import Users from './pages/Users';
 import InvoiceLabel from './pages/InvoiceLabel';
 import QuoteMailSettings from './pages/QuoteMailSettings';
 import CompletedOrders from './pages/CompletedOrders';
+import CompletedQuotes from './pages/CompletedQuotes';
 import PurchaseOrderDetail from './pages/PurchaseOrderDetail';
+import PurchaseOrderForm from './pages/PurchaseOrderForm';
 
 // Protected Route Component
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -125,7 +127,10 @@ function App() {
             <Route path="quotes/:id/edit" element={<QuoteForm />} />
             <Route path="quotes/:id" element={<QuoteDetail />} />
             <Route path="approvals" element={<Quotes />} />
+            <Route path="completed-quotes" element={<CompletedQuotes />} />
             <Route path="purchase-orders" element={<CompletedOrders />} />
+            <Route path="purchase-orders/new" element={<PurchaseOrderForm />} />
+            <Route path="purchase-orders/:id/edit" element={<PurchaseOrderForm />} />
             <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
             <Route path="manufacturers" element={<Manufacturers />} />
             <Route

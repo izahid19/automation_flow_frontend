@@ -20,15 +20,22 @@ import {
   Trash2,
   Download,
   Edit,
-  Calendar
+  Calendar,
+  Check
 } from 'lucide-react';
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import toast from 'react-hot-toast';
 
 const Quotes = () => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
-  const [statusFilter, setStatusFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState(['all']);
   const [dateFilter, setDateFilter] = useState('all');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
@@ -131,7 +138,9 @@ const Quotes = () => {
     try {
       const params = { page: pagination.page, limit: 10 };
       if (search) params.search = search;
-      if (statusFilter && statusFilter !== 'all') params.status = statusFilter;
+      if (statusFilter.length > 0 && !statusFilter.includes('all')) {
+        params.status = statusFilter.join(',');
+      }
       
       // Add date filtering
       if (dateFilter && dateFilter !== 'all') {
@@ -151,6 +160,23 @@ const Quotes = () => {
       setLoading(false);
     }
   }, [search, statusFilter, dateFilter, customDateFrom, customDateTo, pagination.page, getDateRange]);
+
+  const toggleStatus = (value) => {
+    setStatusFilter(prev => {
+      if (value === 'all') {
+        return ['all'];
+      }
+      
+      const newStatus = prev.filter(s => s !== 'all');
+      
+      if (newStatus.includes(value)) {
+        const filtered = newStatus.filter(s => s !== value);
+        return filtered.length === 0 ? ['all'] : filtered;
+      } else {
+        return [...newStatus, value];
+      }
+    });
+  };
 
   useEffect(() => {
     fetchQuotes();
@@ -261,24 +287,6 @@ const Quotes = () => {
                   className="pl-10"
                 />
               </div>
-              <Select value={statusFilter} onValueChange={setStatusFilter}>
-                <SelectTrigger className="w-full sm:w-48">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all">All Status</SelectItem>
-                  <SelectItem value="draft">Draft</SelectItem>
-                  <SelectItem value="submitted">Submitted</SelectItem>
-                  <SelectItem value="pending_manager_approval">Pending Manager</SelectItem>
-                  <SelectItem value="approved">Manager Approved</SelectItem>
-                  <SelectItem value="rejected">Rejected</SelectItem>
-                  <SelectItem value="pending_accountant">Pending Accountant</SelectItem>
-                  <SelectItem value="pending_designer">Pending Designer</SelectItem>
-                  <SelectItem value="ready_for_po">Ready for PO</SelectItem>
-                  <SelectItem value="po_created">PO Created</SelectItem>
-                  <SelectItem value="completed">Completed</SelectItem>
-                </SelectContent>
-              </Select>
               <Select value={dateFilter} onValueChange={setDateFilter}>
                 <SelectTrigger className="w-full sm:w-48">
                   <SelectValue placeholder="All Dates" />
@@ -320,6 +328,37 @@ const Quotes = () => {
                 />
               </div>
             )}
+            
+            {/* Status Filter Chips */}
+            <div className="flex flex-wrap gap-2 pt-2">
+              {[
+                { value: 'all', label: 'All Status' },
+                { value: 'draft', label: 'Draft' },
+                { value: 'submitted', label: 'Submitted' },
+                { value: 'pending_manager_approval', label: 'Pending Manager' },
+                { value: 'approved', label: 'Manager Approved' },
+                { value: 'rejected', label: 'Rejected' },
+                { value: 'pending_accountant', label: 'Pending Accountant' },
+                { value: 'pending_designer', label: 'Pending Designer' },
+                { value: 'ready_for_po', label: 'Ready for PO' },
+                { value: 'po_created', label: 'PO Created' },
+                { value: 'completed', label: 'Completed' },
+              ].map((status) => (
+                <Badge
+                  key={status.value}
+                  variant="outline"
+                  className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
+                    statusFilter.includes(status.value)
+                      ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
+                      : "text-muted-foreground hover:bg-muted/50"
+                  }`}
+                  onClick={() => toggleStatus(status.value)}
+                >
+                  {statusFilter.includes(status.value) && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
+                  {status.label}
+                </Badge>
+              ))}
+            </div>
           </div>
         </CardContent>
       </Card>
@@ -343,9 +382,11 @@ const Quotes = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Quote #</TableHead>
+                  <TableHead>Quote Number</TableHead>
                   <TableHead>Client</TableHead>
-                  <TableHead>Items</TableHead>
+                  <TableHead>Quote Item Names</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>Rate</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -369,11 +410,48 @@ const Quotes = () => {
                         <p className="text-xs text-muted-foreground">{quote.clientEmail}</p>
                       </div>
                     </TableCell>
-                    <TableCell>{quote.items?.length || 0} items</TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {quote.items?.length > 0 ? (
+                          quote.items.map((item, index) => (
+                            <span key={index} className="font-medium text-sm">
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.brandName || item.name || 'N/A'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {quote.items?.length > 0 ? (
+                           quote.items.map((item, index) => (
+                             <span key={index} className="text-sm">
+                               {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.quantity || '-'}
+                             </span>
+                           ))
+                        ) : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {quote.items?.length > 0 ? (
+                           quote.items.map((item, index) => (
+                             <span key={index} className="text-sm">
+                               {quote.items.length > 1 ? `${index + 1}. ` : ''}₹{item.rate || '0'}
+                             </span>
+                           ))
+                        ) : '-'}
+                      </div>
+                    </TableCell>
                     <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>
-                    <TableCell className="text-muted-foreground">
-                      {new Date(quote.createdAt).toLocaleDateString('en-GB')} {new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    <TableCell>
+                      <div className="flex flex-col">
+                        <span className="font-medium text-muted-foreground">{new Date(quote.createdAt).toLocaleDateString('en-GB')}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">

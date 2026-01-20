@@ -691,15 +691,115 @@ const QuoteDetail = () => {
                         toast.error('Failed to update design status');
                       });
                     }}
-                    disabled={actionLoading}
+                    disabled={actionLoading || quote.clientDesignApprovedAt}
                     className="input"
                   >
                     <option value="pending">Pending</option>
                     <option value="in_progress">In Progress</option>
-                    <option value="completed">Completed</option>
-                    <option value="approved">Approved</option>
                   </select>
                 </div>
+
+                {/* Client Approval Button - Show when In Progress and not yet client approved */}
+                {quote.designStatus === 'in_progress' && !quote.clientDesignApprovedAt && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={async () => {
+                        setActionLoading(true);
+                        try {
+                          await quoteAPI.confirmClientDesignApproval(id);
+                          toast.success('Client approval confirmed!');
+                          fetchQuote();
+                        } catch (error) {
+                          toast.error('Failed to confirm client approval');
+                        } finally {
+                          setActionLoading(false);
+                        }
+                      }}
+                      disabled={actionLoading}
+                      className="btn btn-success w-full"
+                    >
+                      {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check size={18} />}
+                      Client Approved
+                    </button>
+                  </div>
+                )}
+
+                {/* Show Client Approval Timestamp */}
+                {quote.clientDesignApprovedAt && (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <p className="text-sm text-green-500 font-semibold mb-1 flex items-center gap-2">
+                      <Check size={16} />
+                      Client Approved
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      Approved on: {new Date(quote.clientDesignApprovedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} at {new Date(quote.clientDesignApprovedAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Manufacturer Approval Button - Show after client approval and not yet manufacturer approved */}
+                {quote.clientDesignApprovedAt && !quote.manufacturerDesignApprovedAt && (
+                  <div className="space-y-3">
+                    <button
+                      onClick={async () => {
+                        setActionLoading(true);
+                        try {
+                          await quoteAPI.confirmManufacturerDesignApproval(id);
+                          toast.success('Manufacturer approval confirmed! Quote is now completed.');
+                          fetchQuote();
+                        } catch (error) {
+                          toast.error('Failed to confirm manufacturer approval');
+                        } finally {
+                          setActionLoading(false);
+                        }
+                      }}
+                      disabled={actionLoading}
+                      className="btn btn-success w-full"
+                    >
+                      {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check size={18} />}
+                      Manufacture Approve
+                    </button>
+                  </div>
+                )}
+
+                {/* Show Manufacturer Approval Timestamp */}
+                {quote.manufacturerDesignApprovedAt && (
+                  <div className="bg-green-500/10 border border-green-500/30 rounded-lg p-4">
+                    <p className="text-sm text-green-500 font-semibold mb-1 flex items-center gap-2">
+                      <Check size={16} />
+                      Manufacture Approved
+                    </p>
+                    <p className="text-xs text-[var(--text-secondary)]">
+                      Approved on: {new Date(quote.manufacturerDesignApprovedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} at {new Date(quote.manufacturerDesignApprovedAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  </div>
+                )}
+
+                {/* Final Status Message */}
+                {quote.status === 'completed' && quote.manufacturerDesignApprovedAt && (
+                  <div className="bg-primary/10 border border-primary/30 rounded-lg p-4">
+                    <p className="text-sm text-primary font-semibold">
+                      🎉 Quote is completed and ready for Purchase Order creation!
+                    </p>
+                  </div>
+                )}
+
                 <div>
                   <label className="block text-sm font-medium mb-2">Design Notes</label>
                   <textarea
@@ -718,26 +818,6 @@ const QuoteDetail = () => {
                     className="input min-h-[80px]"
                   />
                 </div>
-                {quote.designStatus === 'approved' && (
-                  <div className="mt-2">
-                    <p className="text-sm text-green-500 mb-1">
-                      ✓ Design approved. {quote.status === 'completed' ? 'Quote is completed.' : 'Quote is ready for Purchase Order creation.'}
-                    </p>
-                    {quote.designApprovedAt && (
-                      <p className="text-xs text-[var(--text-secondary)]">
-                        Approved on: {new Date(quote.designApprovedAt).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric'
-                        })} at {new Date(quote.designApprovedAt).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true
-                        })}
-                      </p>
-                    )}
-                  </div>
-                )}
               </div>
             </div>
           )}
@@ -1004,26 +1084,26 @@ const QuoteDetail = () => {
                 </div>
               )}
 
-              {/* Designer Approval */}
+              {/* Designer Status */}
               {(quote.status === 'pending_designer' || quote.status === 'completed' || quote.designStatus !== 'pending') && (
                 <div className="flex gap-3">
                   <div className="flex flex-col items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
                       quote.designStatus === 'approved' 
                         ? 'bg-green-500' 
-                        : quote.designStatus === 'completed'
+                        : quote.designStatus === 'in_progress'
                         ? 'bg-blue-500'
                         : quote.status === 'pending_designer'
                         ? 'bg-yellow-500 animate-pulse'
                         : 'bg-gray-500'
                     }`}>
-                      {quote.designStatus === 'approved' ? (
-                        <Check size={16} className="text-white" />
+                      {quote.designStatus === 'in_progress' ? (
+                        <span className="text-xs text-white">D</span>
                       ) : (
                         <span className="text-xs text-white">D</span>
                       )}
                     </div>
-                    {quote.status === 'completed' && <div className="w-0.5 h-full bg-border mt-2" />}
+                    <div className="w-0.5 h-full bg-border mt-2" />
                   </div>
                   <div className="flex-1 pb-4">
                     <p className="font-medium">
@@ -1035,24 +1115,65 @@ const QuoteDetail = () => {
                     <p className="text-xs text-[var(--text-secondary)] capitalize">
                       {quote.designStatus || 'Pending'}
                     </p>
-                    {quote.designApprovedAt && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1">
-                        Approved: {new Date(quote.designApprovedAt).toLocaleDateString('en-GB', {
-                          day: '2-digit',
-                          month: '2-digit',
-                          year: 'numeric'
-                        })} at {new Date(quote.designApprovedAt).toLocaleTimeString('en-US', {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                          hour12: true
-                        })}
-                      </p>
-                    )}
                     {quote.designNotes && (
                       <p className="text-xs text-[var(--text-secondary)] mt-1 italic">
                         Notes: {quote.designNotes}
                       </p>
                     )}
+                  </div>
+                </div>
+              )}
+
+              {/* Client Design Approval */}
+              {quote.clientDesignApprovedAt && (
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500">
+                      <Check size={16} className="text-white" />
+                    </div>
+                    <div className="w-0.5 h-full bg-border mt-2" />
+                  </div>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium">Client Design Approved</p>
+                    <p className="text-xs text-green-500">Approved</p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      {new Date(quote.clientDesignApprovedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} at {new Date(quote.clientDesignApprovedAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Manufacturer Design Approval */}
+              {quote.manufacturerDesignApprovedAt && (
+                <div className="flex gap-3">
+                  <div className="flex flex-col items-center">
+                    <div className="w-8 h-8 rounded-full flex items-center justify-center bg-green-500">
+                      <Check size={16} className="text-white" />
+                    </div>
+                    {quote.status === 'completed' && <div className="w-0.5 h-full bg-border mt-2" />}
+                  </div>
+                  <div className="flex-1 pb-4">
+                    <p className="font-medium">Manufacturer Design Approved</p>
+                    <p className="text-xs text-green-500">Approved</p>
+                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      {new Date(quote.manufacturerDesignApprovedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} at {new Date(quote.manufacturerDesignApprovedAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
                   </div>
                 </div>
               )}

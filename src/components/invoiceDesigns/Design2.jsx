@@ -1,5 +1,5 @@
 // Design 2: Card-Based Layout
-const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, totals }) => {
+const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, totals, hidePurchaseRate }) => {
   const { subtotal, taxOnSubtotal, taxOnCharges, totalTax, total, advancePayment } = totals;
 
   return (
@@ -25,9 +25,11 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                       <span className="text-base text-gray-500 font-medium">Brand Name:</span>
                       <h4 className="font-bold text-lg text-gray-800">{item.brandName || '-'}</h4>
                     </div>
+                    {!hidePurchaseRate && (
                     <div className="text-right ml-4">
                       <p className="text-lg font-medium text-gray-600">MRP per strip/unit: ₹{(parseFloat(item.mrp) || 0).toFixed(2)}</p>
                     </div>
+                    )}
                   </div>
                   
                   {/* Composition - Full Width */}
@@ -165,14 +167,14 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                     <span className="text-base text-gray-600">Quantity:</span>
                     <span className="text-base font-medium">{item.quantity || 0}</span>
                   </div>
-                  <div className="flex justify-between">
-                    <span className="text-base text-gray-600">Our Rate (₹):</span>
-                    <span className="text-base font-medium">₹{(parseFloat(item.rate) || 0).toFixed(2)}</span>
-                  </div>
-                  <div className="flex justify-between pt-2 border-t border-gray-200">
-                    <span className="text-lg font-semibold text-gray-700">Amount:</span>
-                    <span className="text-lg font-bold text-orange-500">₹{((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)).toFixed(2)}</span>
-                  </div>
+                    <div className="flex justify-between">
+                        <span className="text-base text-gray-600">Our Rate (₹):</span>
+                        <span className="text-base font-medium">₹{(parseFloat(item.rate) || 0).toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between pt-2 border-t border-gray-200">
+                        <span className="text-lg font-semibold text-gray-700">Amount:</span>
+                        <span className="text-lg font-bold text-orange-500">₹{((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)).toFixed(2)}</span>
+                    </div>
                 </div>
               </div>
             </div>

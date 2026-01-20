@@ -62,6 +62,8 @@ export const quoteAPI = {
   confirmAdvancePayment: (id) => api.post(`/quotes/${id}/confirm-advance-payment`),
   resendEmail: (id) => api.post(`/quotes/${id}/resend-email`),
   updateDesign: (id, data) => api.post(`/quotes/${id}/design-status`, data),
+  confirmClientDesignApproval: (id) => api.post(`/quotes/${id}/client-design-approval`),
+  confirmManufacturerDesignApproval: (id) => api.post(`/quotes/${id}/manufacturer-design-approval`),
   getStats: () => api.get('/quotes/stats'),
   downloadPDF: (id) => api.get(`/quotes/${id}/pdf`, { responseType: 'blob' }),
 
