@@ -245,7 +245,7 @@ const QuoteDetail = () => {
   if (loading) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -254,8 +254,8 @@ const QuoteDetail = () => {
 
   const canApproveManager = (isAdmin || isManager) && quote.status === 'pending_manager_approval';
   const canUpdateClientOrderStatus = (isAdmin || isManager) && quote.status === 'manager_approved' && quote.clientOrderStatus === 'pending';
-  const canConfirmAdvancePayment = (isAdmin || isAccountant) && quote.status === 'pending_accountant';
-  const canUpdateDesign = (isAdmin || isDesigner) && quote.status === 'pending_designer';
+  const canConfirmAdvancePayment = (isAdmin || isAccountant || isManager) && quote.status === 'pending_accountant';
+  const canUpdateDesign = (isAdmin || isDesigner || isManager) && quote.status === 'pending_designer';
   const canSubmit = quote.status === 'draft' || quote.status === 'manager_rejected';
   const canResendEmail = (isAdmin || isManager) && quote.status !== 'draft' && quote.status !== 'manager_rejected' && quote.status !== 'pending_manager_approval' && quote.clientEmail;
 
@@ -272,7 +272,7 @@ const QuoteDetail = () => {
               <h1 className="text-2xl font-bold">{quote.quoteNumber}</h1>
               {getStatusBadge(quote.status)}
             </div>
-            <p className="text-[var(--text-secondary)]">
+            <p className="text-muted-foreground">
               Created on {new Date(quote.createdAt).toLocaleDateString('en-GB')}
             </p>
           </div>
@@ -337,33 +337,33 @@ const QuoteDetail = () => {
             <h2 className="text-lg font-semibold mb-4">Client Information</h2>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
               <div className="flex items-center gap-3">
-                <User className="w-5 h-5 text-[var(--text-secondary)]" />
+                <User className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-[var(--text-secondary)]">Name</p>
+                  <p className="text-sm text-muted-foreground">Name</p>
                   <p className="font-medium">{quote.clientName}</p>
                 </div>
               </div>
               <div className="flex items-center gap-3">
-                <Mail className="w-5 h-5 text-[var(--text-secondary)]" />
+                <Mail className="w-5 h-5 text-muted-foreground" />
                 <div>
-                  <p className="text-sm text-[var(--text-secondary)]">Email</p>
+                  <p className="text-sm text-muted-foreground">Email</p>
                   <p className="font-medium">{quote.clientEmail}</p>
                 </div>
               </div>
               {quote.clientPhone && (
                 <div className="flex items-center gap-3">
-                  <Phone className="w-5 h-5 text-[var(--text-secondary)]" />
+                  <Phone className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-[var(--text-secondary)]">Phone</p>
+                    <p className="text-sm text-muted-foreground">Phone</p>
                     <p className="font-medium">{quote.clientPhone}</p>
                   </div>
                 </div>
               )}
               {quote.clientAddress && (
                 <div className="flex items-center gap-3">
-                  <MapPin className="w-5 h-5 text-[var(--text-secondary)]" />
+                  <MapPin className="w-5 h-5 text-muted-foreground" />
                   <div>
-                    <p className="text-sm text-[var(--text-secondary)]">Address</p>
+                    <p className="text-sm text-muted-foreground">Address</p>
                     <p className="font-medium">{quote.clientAddress}</p>
                   </div>
                 </div>
@@ -639,7 +639,7 @@ const QuoteDetail = () => {
                     <option value="approved">Approved</option>
                   </select>
                 </div>
-                <p className="text-sm text-[var(--text-secondary)]">
+                <p className="text-sm text-muted-foreground">
                   When set to "Approved", the quote will be sent to Accountant.
                 </p>
               </div>
@@ -651,7 +651,7 @@ const QuoteDetail = () => {
             <div className="card">
               <h2 className="text-lg font-semibold mb-4">Accountant Action</h2>
               <div className="space-y-4">
-                <p className="text-sm text-[var(--text-secondary)]">
+                <p className="text-sm text-muted-foreground">
                   Confirm that advance payment has been received from the client.
                 </p>
                 <button
@@ -727,7 +727,7 @@ const QuoteDetail = () => {
                       <Check size={16} />
                       Client Approved
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-xs text-muted-foreground">
                       Approved on: {new Date(quote.clientDesignApprovedAt).toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: '2-digit',
@@ -773,7 +773,7 @@ const QuoteDetail = () => {
                       <Check size={16} />
                       Manufacture Approved
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-xs text-muted-foreground">
                       Approved on: {new Date(quote.manufacturerDesignApprovedAt).toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: '2-digit',
@@ -826,7 +826,7 @@ const QuoteDetail = () => {
             <h2 className="text-lg font-semibold mb-4">Summary</h2>
             <div className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-[var(--text-secondary)]">Subtotal</span>
+                <span className="text-muted-foreground">Subtotal</span>
                 <span>₹{quote.subtotal?.toFixed(2)}</span>
               </div>
               {(() => {
@@ -844,13 +844,13 @@ const QuoteDetail = () => {
                   <>
                     {taxOnSubtotal > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[var(--text-secondary)]">Tax on Subtotal ({taxPercent}%)</span>
+                        <span className="text-muted-foreground">Tax on Subtotal ({taxPercent}%)</span>
                         <span>₹{taxOnSubtotal.toFixed(2)}</span>
                       </div>
                     )}
                     {(cylinderCharges || 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[var(--text-secondary)]">
+                        <span className="text-muted-foreground">
                           Cylinder Charges
                           {(quote.numberOfCylinders || 0) > 0 && (
                             <span className="text-xs ml-1">({quote.numberOfCylinders} Cylinder{quote.numberOfCylinders > 1 ? 's' : ''})</span>
@@ -861,19 +861,19 @@ const QuoteDetail = () => {
                     )}
                     {(inventoryCharges || 0) > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[var(--text-secondary)]">Inventory Charges</span>
+                        <span className="text-muted-foreground">Inventory Charges</span>
                         <span>₹{quote.inventoryCharges?.toFixed(2)}</span>
                       </div>
                     )}
                     {taxOnCharges > 0 && (
                       <div className="flex justify-between">
-                        <span className="text-[var(--text-secondary)]">Tax on Cylinder & Inventory Charges (18%)</span>
+                        <span className="text-muted-foreground">Tax on Cylinder & Inventory Charges (18%)</span>
                         <span>₹{taxOnCharges.toFixed(2)}</span>
                       </div>
                     )}
                     {totalTax > 0 && (
                       <div className="flex justify-between font-semibold">
-                        <span className="text-[var(--text-secondary)]">Total Tax</span>
+                        <span className="text-muted-foreground">Total Tax</span>
                         <span>₹{totalTax.toFixed(2)}</span>
                       </div>
                     )}
@@ -886,10 +886,10 @@ const QuoteDetail = () => {
                   <span>-₹{quote.discount?.toFixed(2)}</span>
                 </div>
               )}
-              <hr className="border-[var(--border)]" />
+              <hr className="border-border" />
               <div className="flex justify-between text-lg font-bold">
                 <span>Total</span>
-                <span className="text-[var(--primary)]">₹{quote.totalAmount?.toFixed(2)}</span>
+                <span className="text-primary">₹{quote.totalAmount?.toFixed(2)}</span>
               </div>
             </div>
           </div>
@@ -908,10 +908,10 @@ const QuoteDetail = () => {
                 </div>
                 <div className="flex-1 pb-4">
                   <p className="font-medium">Quote Created</p>
-                  <p className="text-xs text-[var(--text-secondary)]">
+                  <p className="text-xs text-muted-foreground">
                     Created by {quote.createdByName || 'Sales Person'}
                   </p>
-                  <p className="text-xs text-[var(--text-secondary)] mt-1">
+                  <p className="text-xs text-muted-foreground mt-1">
                     {new Date(quote.createdAt).toLocaleDateString('en-GB', {
                       day: '2-digit',
                       month: '2-digit',
@@ -948,11 +948,11 @@ const QuoteDetail = () => {
                   </div>
                   <div className="flex-1 pb-4">
                     <p className="font-medium">Manager Approval</p>
-                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                    <p className="text-xs text-muted-foreground capitalize">
                       {quote.managerApproval?.status || 'Pending'}
                     </p>
                     {quote.managerApproval?.approvedAt && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {new Date(quote.managerApproval.approvedAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: '2-digit',
@@ -965,7 +965,7 @@ const QuoteDetail = () => {
                       </p>
                     )}
                     {quote.managerApproval?.comments && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1 italic">
+                      <p className="text-xs text-muted-foreground mt-1 italic">
                         Comments: {quote.managerApproval.comments}
                       </p>
                     )}
@@ -992,16 +992,16 @@ const QuoteDetail = () => {
                   </div>
                   <div className="flex-1 pb-4">
                     <p className="font-medium">Client Order Confirmation</p>
-                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                    <p className="text-xs text-muted-foreground capitalize">
                       {quote.clientOrderStatus || 'Pending'}
                     </p>
                     {quote.clientOrderApprovedBy && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         Approved by: {quote.clientOrderApprovedBy?.name || 'Unknown'}
                       </p>
                     )}
                     {quote.clientOrderApprovedAt && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {new Date(quote.clientOrderApprovedAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: '2-digit',
@@ -1047,11 +1047,11 @@ const QuoteDetail = () => {
                         <span className="ml-2 text-xs text-yellow-500">(In Progress)</span>
                       )}
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                    <p className="text-xs text-muted-foreground capitalize">
                       {quote.accountantApproval?.status || (quote.status === 'pending_accountant' ? 'Pending' : 'Not Started')}
                     </p>
                     {quote.accountantApproval?.approvedAt && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1">
+                      <p className="text-xs text-muted-foreground mt-1">
                         {new Date(quote.accountantApproval.approvedAt).toLocaleDateString('en-GB', {
                           day: '2-digit',
                           month: '2-digit',
@@ -1108,11 +1108,11 @@ const QuoteDetail = () => {
                         <span className="ml-2 text-xs text-yellow-500">(In Progress)</span>
                       )}
                     </p>
-                    <p className="text-xs text-[var(--text-secondary)] capitalize">
+                    <p className="text-xs text-muted-foreground capitalize">
                       {quote.designStatus || 'Pending'}
                     </p>
                     {quote.designNotes && (
-                      <p className="text-xs text-[var(--text-secondary)] mt-1 italic">
+                      <p className="text-xs text-muted-foreground mt-1 italic">
                         Notes: {quote.designNotes}
                       </p>
                     )}
@@ -1132,7 +1132,7 @@ const QuoteDetail = () => {
                   <div className="flex-1 pb-4">
                     <p className="font-medium">Client Design Approved</p>
                     <p className="text-xs text-green-500">Approved</p>
-                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {new Date(quote.clientDesignApprovedAt).toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: '2-digit',
@@ -1159,7 +1159,7 @@ const QuoteDetail = () => {
                   <div className="flex-1 pb-4">
                     <p className="font-medium">Manufacturer Design Approved</p>
                     <p className="text-xs text-green-500">Approved</p>
-                    <p className="text-xs text-[var(--text-secondary)] mt-1">
+                    <p className="text-xs text-muted-foreground mt-1">
                       {new Date(quote.manufacturerDesignApprovedAt).toLocaleDateString('en-GB', {
                         day: '2-digit',
                         month: '2-digit',
@@ -1184,7 +1184,7 @@ const QuoteDetail = () => {
                   </div>
                   <div className="flex-1">
                     <p className="font-medium text-green-500">Order Completed</p>
-                    <p className="text-xs text-[var(--text-secondary)]">
+                    <p className="text-xs text-muted-foreground">
                       All approvals received
                     </p>
                   </div>
@@ -1198,8 +1198,8 @@ const QuoteDetail = () => {
 
 
       {/* Preview Panel - Always rendered for PDF generation, hidden when not toggled */}
-      <div className={`card mt-6 border-2 border-[var(--primary)] ${showPreview ? '' : 'fixed left-[-9999px] top-0 w-[210mm]'}`}>
-        <div className="p-4 bg-[var(--primary)]/10 border-b border-[var(--border)]">
+      <div className={`card mt-6 border-2 border-primary ${showPreview ? '' : 'fixed left-[-9999px] top-0 w-[210mm]'}`}>
+        <div className="p-4 bg-primary/10 border-b border-border">
           <h2 className="text-lg font-semibold flex items-center gap-2">
             <Eye size={20} />
             Quote Preview
