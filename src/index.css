@@ -114,7 +114,7 @@ body {
 
 .badge-warning {
   background: oklch(0.8 0.16 85 / 15%);
-  color: oklch(0.8 0.16 85);
+  color: white;
 }
 
 .badge-error {
@@ -123,8 +123,8 @@ body {
 }
 
 .badge-primary {
-  background: oklch(0.7 0.18 50 / 15%);
-  color: oklch(0.7 0.18 50);
+  background: oklch(0.7 0.18 50 / 80%);
+  color: white;
 }
 
 .badge-secondary {
