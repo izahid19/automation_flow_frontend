@@ -136,7 +136,7 @@ const Quotes = () => {
 
   const fetchQuotes = useCallback(async () => {
     try {
-      const params = { page: pagination.page, limit: 10 };
+      const params = { page: pagination.page, limit: 30 };
       if (search) params.search = search;
       if (statusFilter.length > 0 && !statusFilter.includes('all')) {
         params.status = statusFilter.join(',');
@@ -242,15 +242,13 @@ const Quotes = () => {
   const getStatusBadge = (status) => {
     const statusMap = {
       draft: { label: 'Draft', variant: 'secondary' },
-      submitted: { label: 'Submitted', variant: 'outline' },
-      pending_manager_approval: { label: 'Pending Manager', variant: 'outline' },
-      approved: { label: 'Manager Approved', variant: 'default' },
-      rejected: { label: 'Rejected', variant: 'destructive' },
+      quote_submitted: { label: 'Quote Submitted', variant: 'outline' },
+      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline' },
+      manager_approved: { label: 'Manager Approved', variant: 'default' },
+      manager_rejected: { label: 'Manager Rejected', variant: 'destructive' },
       pending_accountant: { label: 'Pending Accountant', variant: 'outline' },
       pending_designer: { label: 'Pending Designer', variant: 'outline' },
-      ready_for_po: { label: 'Ready for PO', variant: 'default' },
-      po_created: { label: 'PO Created', variant: 'default' },
-      completed: { label: 'Completed', variant: 'default' },
+      completed_quote: { label: 'Quote Completed', variant: 'default' },
     };
     const s = statusMap[status] || { label: status, variant: 'secondary' };
     return <Badge variant={s.variant}>{s.label}</Badge>;
@@ -334,15 +332,13 @@ const Quotes = () => {
               {[
                 { value: 'all', label: 'All Status' },
                 { value: 'draft', label: 'Draft' },
-                { value: 'submitted', label: 'Submitted' },
-                { value: 'pending_manager_approval', label: 'Pending Manager' },
-                { value: 'approved', label: 'Manager Approved' },
-                { value: 'rejected', label: 'Rejected' },
+                { value: 'quote_submitted', label: 'Quote Submitted' },
+                { value: 'pending_manager_approval', label: 'Pending Manager Approval' },
+                { value: 'manager_approved', label: 'Manager Approved' },
+                { value: 'manager_rejected', label: 'Manager Rejected' },
                 { value: 'pending_accountant', label: 'Pending Accountant' },
                 { value: 'pending_designer', label: 'Pending Designer' },
-                { value: 'ready_for_po', label: 'Ready for PO' },
-                { value: 'po_created', label: 'PO Created' },
-                { value: 'completed', label: 'Completed' },
+                { value: 'completed_quote', label: 'Quote Completed' },
               ].map((status) => (
                 <Badge
                   key={status.value}
@@ -386,9 +382,10 @@ const Quotes = () => {
                   <TableHead>Client</TableHead>
                   <TableHead>Quote Item Names</TableHead>
                   <TableHead>Quantity</TableHead>
-                  <TableHead>Rate</TableHead>
+                  <TableHead>MRP</TableHead>
+                  <TableHead>Our Rate</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Quote Status</TableHead>
                   <TableHead>Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
@@ -429,6 +426,17 @@ const Quotes = () => {
                            quote.items.map((item, index) => (
                              <span key={index} className="text-sm">
                                {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.quantity || '-'}
+                             </span>
+                           ))
+                        ) : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {quote.items?.length > 0 ? (
+                           quote.items.map((item, index) => (
+                             <span key={index} className="text-sm">
+                               {quote.items.length > 1 ? `${index + 1}. ` : ''}₹{item.mrp || '0'}
                              </span>
                            ))
                         ) : '-'}

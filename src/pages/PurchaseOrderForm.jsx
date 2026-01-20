@@ -33,6 +33,7 @@ const PurchaseOrderForm = () => {
   // Get quoteId from URL query params
   const searchParams = new URLSearchParams(window.location.search);
   const quoteId = searchParams.get('quoteId');
+  const targetItemIndex = searchParams.get('itemIndex');
   
   const [formData, setFormData] = useState({
     manufacturerId: '',
@@ -68,14 +69,22 @@ const PurchaseOrderForm = () => {
       }));
       
       // Pre-populate items from quote
+      // Pre-populate items from quote
       if (quote.items && quote.items.length > 0) {
-        setItems(quote.items.map(item => ({
+        const taggedItems = quote.items.map((item, i) => ({ ...item, _originalIndex: i }));
+        
+        const itemsToLoad = targetItemIndex !== null 
+          ? taggedItems.filter(item => item._originalIndex === parseInt(targetItemIndex))
+          : taggedItems;
+
+        setItems(itemsToLoad.map((item) => ({
           ...DEFAULT_ITEM,
           ...item,
           quantity: item.quantity?.toString() || '',
           rate: item.rate?.toString() || '',
           mrp: item.mrp?.toString() || '',
           selected: true,
+          originalIndex: item._originalIndex,
         })));
       }
       
@@ -177,9 +186,6 @@ const PurchaseOrderForm = () => {
 
   const calculateTotals = () => {
     const subtotal = items.reduce((sum, item) => {
-      // Only calculate totals for selected items
-      if (!item.selected) return sum;
-
       const qty = parseFloat(item.quantity) || 0;
       const rate = parseFloat(item.rate) || 0;
       return sum + (qty * rate);
@@ -194,15 +200,13 @@ const PurchaseOrderForm = () => {
       return false;
     }
 
-    const selectedItems = items.filter(i => i.selected);
-
-    if (selectedItems.length === 0) {
-      toast.error('Please select at least one item');
+    if (items.length === 0) {
+      toast.error('Please add at least one item');
       return false;
     }
 
-    for (let i = 0; i < selectedItems.length; i++) {
-      const item = selectedItems[i];
+    for (let i = 0; i < items.length; i++) {
+      const item = items[i];
       if (!item.brandName || !item.quantity || !item.rate) {
         toast.error(`Item ${i + 1}: Brand name, quantity, and rate are required`);
         return false;
@@ -220,14 +224,13 @@ const PurchaseOrderForm = () => {
       const token = localStorage.getItem('token');
       const { subtotal, total } = calculateTotals();
       
-      const selectedItems = items.filter(item => item.selected);
-
       await axios.post(`${API_URL}/purchase-orders/direct`, {
         ...formData,
-        items: selectedItems,
+        items: items,
         subtotal,
         totalAmount: total,
         status: 'draft',
+        quoteId, // Pass quoteId if available
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -249,14 +252,13 @@ const PurchaseOrderForm = () => {
       const token = localStorage.getItem('token');
       const { subtotal, total } = calculateTotals();
       
-      const selectedItems = items.filter(item => item.selected);
-
       await axios.post(`${API_URL}/purchase-orders/direct`, {
         ...formData,
-        items: selectedItems,
+        items: items,
         subtotal,
         totalAmount: total,
         status: 'sent',
+        quoteId, // Pass quoteId if available
       }, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -415,16 +417,11 @@ const PurchaseOrderForm = () => {
                       {/* Item Header */}
                       <div className="flex items-center justify-between border-b border-border/40 pb-3">
                         <div className="flex items-center gap-3">
-                          <Checkbox
-                            checked={item.selected}
-                            onCheckedChange={(checked) => handleItemChange(index, 'selected', checked)}
-                            className="h-5 w-5"
-                          />
                           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
                             {index + 1}
                           </span>
                           <span className="font-semibold text-foreground">
-                            Product Details {item.selected ? '(Selected)' : '(Excluded)'}
+                            Product Details
                           </span>
                         </div>
                       </div>
@@ -497,9 +494,35 @@ const PurchaseOrderForm = () => {
                              <ReadOnlyField label="Specification" value={item.specification} />
                           </div>
 
-                          <ReadOnlyField label="Quantity" value={item.quantity} />
-                          <ReadOnlyField label="Rate (₹)" value={item.rate} />
-                          <ReadOnlyField label="MRP per strip/unit (₹)" value={item.mrp} />
+                          <div className="grid grid-cols-1 md:grid-cols-3 gap-5 md:col-span-2">
+                            <ReadOnlyField label="Quantity" value={item.quantity} />
+                            
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                Rate (₹)
+                              </Label>
+                              <Input
+                                type="text"
+                                value={item.rate}
+                                onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
+                                className="h-[38px]"
+                                placeholder="0.00"
+                              />
+                            </div>
+
+                            <div className="space-y-1.5">
+                              <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                MRP per strip/unit (₹)
+                              </Label>
+                              <Input
+                                type="text"
+                                value={item.mrp}
+                                onChange={(e) => handleItemChange(index, 'mrp', e.target.value)}
+                                className="h-[38px]"
+                                placeholder="0.00"
+                              />
+                            </div>
+                          </div>
                           
                           <div className="space-y-1.5">
                             <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">

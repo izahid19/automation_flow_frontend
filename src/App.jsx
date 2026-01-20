@@ -18,7 +18,7 @@ import Users from './pages/Users';
 import InvoiceLabel from './pages/InvoiceLabel';
 import QuoteMailSettings from './pages/QuoteMailSettings';
 import CompletedOrders from './pages/CompletedOrders';
-import CompletedQuotes from './pages/CompletedQuotes';
+import OrderSheet from './pages/OrderSheet';
 import PurchaseOrderDetail from './pages/PurchaseOrderDetail';
 import PurchaseOrderForm from './pages/PurchaseOrderForm';
 
@@ -51,8 +51,8 @@ const PublicRoute = ({ children }) => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--background)]">
-        <div className="w-8 h-8 border-4 border-[var(--primary)] border-t-transparent rounded-full animate-spin"></div>
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="w-8 h-8 border-4 border-primary border-t-transparent rounded-full animate-spin"></div>
       </div>
     );
   }
@@ -127,7 +127,7 @@ function App() {
             <Route path="quotes/:id/edit" element={<QuoteForm />} />
             <Route path="quotes/:id" element={<QuoteDetail />} />
             <Route path="approvals" element={<Quotes />} />
-            <Route path="completed-quotes" element={<CompletedQuotes />} />
+            <Route path="order-sheet" element={<OrderSheet />} />
             <Route path="purchase-orders" element={<CompletedOrders />} />
             <Route path="purchase-orders/new" element={<PurchaseOrderForm />} />
             <Route path="purchase-orders/:id/edit" element={<PurchaseOrderForm />} />

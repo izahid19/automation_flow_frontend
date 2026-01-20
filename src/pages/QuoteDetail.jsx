@@ -230,15 +230,13 @@ const QuoteDetail = () => {
   const getStatusBadge = (status) => {
     const statusMap = {
       draft: { label: 'Draft', class: 'badge-secondary' },
-      submitted: { label: 'Submitted', class: 'badge-primary' },
+      quote_submitted: { label: 'Quote Submitted', class: 'badge-primary' },
       pending_manager_approval: { label: 'Pending Manager Approval', class: 'badge-warning' },
-      approved: { label: 'Manager Approved', class: 'badge-success' },
-      rejected: { label: 'Rejected', class: 'badge-error' },
+      manager_approved: { label: 'Manager Approved', class: 'badge-success' },
+      manager_rejected: { label: 'Manager Rejected', class: 'badge-error' },
       pending_accountant: { label: 'Pending Accountant', class: 'badge-warning' },
       pending_designer: { label: 'Pending Designer', class: 'badge-primary' },
-      ready_for_po: { label: 'Ready for PO', class: 'badge-success' },
-      po_created: { label: 'PO Created', class: 'badge-success' },
-      completed: { label: 'Completed', class: 'badge-success' },
+      completed_quote: { label: 'Quote Completed', class: 'badge-success' },
     };
     const s = statusMap[status] || { label: status, class: 'badge-secondary' };
     return <span className={`badge ${s.class}`}>{s.label}</span>;
@@ -254,14 +252,12 @@ const QuoteDetail = () => {
 
   if (!quote) return null;
 
-  const canApproveSE = (isAdmin || isSalesExecutive) && quote.status === 'pending_se_approval';
   const canApproveManager = (isAdmin || isManager) && quote.status === 'pending_manager_approval';
-  const canApproveMD = (isAdmin || isMD) && quote.status === 'pending_md_approval';
-  const canUpdateClientOrderStatus = (isAdmin || isManager) && quote.status === 'approved' && quote.clientOrderStatus === 'pending';
+  const canUpdateClientOrderStatus = (isAdmin || isManager) && quote.status === 'manager_approved' && quote.clientOrderStatus === 'pending';
   const canConfirmAdvancePayment = (isAdmin || isAccountant) && quote.status === 'pending_accountant';
   const canUpdateDesign = (isAdmin || isDesigner) && quote.status === 'pending_designer';
-  const canSubmit = quote.status === 'draft' || quote.status === 'rejected';
-  const canResendEmail = (isAdmin || isManager) && quote.status !== 'draft' && quote.status !== 'rejected' && quote.status !== 'pending_manager_approval' && quote.clientEmail;
+  const canSubmit = quote.status === 'draft' || quote.status === 'manager_rejected';
+  const canResendEmail = (isAdmin || isManager) && quote.status !== 'draft' && quote.status !== 'manager_rejected' && quote.status !== 'pending_manager_approval' && quote.clientEmail;
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -591,7 +587,7 @@ const QuoteDetail = () => {
           </Card>
 
           {/* Approval Actions */}
-          {(canApproveSE || canApproveManager || canApproveMD) && (
+          {canApproveManager && (
             <div className="card">
               <h2 className="text-lg font-semibold mb-4">Approval Action</h2>
               <div className="space-y-4">
@@ -606,7 +602,7 @@ const QuoteDetail = () => {
                 </div>
                 <div className="flex gap-3">
                   <button
-                    onClick={canApproveSE ? handleApproveSE : canApproveManager ? handleApproveManager : handleApproveMD}
+                    onClick={handleApproveManager}
                     disabled={actionLoading}
                     className="btn btn-success flex-1"
                   >
@@ -614,7 +610,7 @@ const QuoteDetail = () => {
                     Approve
                   </button>
                   <button
-                    onClick={canApproveSE ? handleRejectSE : handleRejectMD}
+                    onClick={handleRejectMD}
                     disabled={actionLoading}
                     className="btn btn-danger flex-1"
                   >

@@ -78,13 +78,13 @@ const Dashboard = () => {
     },
     {
       title: 'Pending Approval',
-      value: getStatusCount('pending_se_approval') + getStatusCount('pending_md_approval'),
+      value: getStatusCount('pending_manager_approval'),
       icon: Clock,
       gradient: 'from-amber-500 to-orange-500',
     },
     {
       title: 'Approved',
-      value: getStatusCount('approved') + getStatusCount('design_approved'),
+      value: getStatusCount('manager_approved') + getStatusCount('design_approved'),
       icon: CheckCircle2,
       gradient: 'from-emerald-500 to-green-500',
     },
@@ -99,13 +99,11 @@ const Dashboard = () => {
   const getStatusBadge = (status) => {
     const statusMap = {
       draft: { label: 'Draft', variant: 'secondary' },
-      pending_se_approval: { label: 'Pending SE', variant: 'outline' },
-      pending_md_approval: { label: 'Pending MD', variant: 'outline' },
-      approved: { label: 'Approved', variant: 'default' },
-      rejected: { label: 'Rejected', variant: 'destructive' },
+      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline' },
+      manager_approved: { label: 'Manager Approved', variant: 'default' },
+      manager_rejected: { label: 'Manager Rejected', variant: 'destructive' },
       design_pending: { label: 'Design Pending', variant: 'outline' },
       design_approved: { label: 'Design Done', variant: 'default' },
-      po_created: { label: 'PO Created', variant: 'default' },
     };
     const s = statusMap[status] || { label: status, variant: 'secondary' };
     return <Badge variant={s.variant}>{s.label}</Badge>;

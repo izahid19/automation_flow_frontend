@@ -74,6 +74,7 @@ export const quoteAPI = {
 export const orderAPI = {
   create: (data) => api.post('/purchase-orders', data),
   getAll: (params) => api.get('/purchase-orders', { params }),
+  getSheet: (params) => api.get('/purchase-orders/sheet', { params }),
   getOne: (id) => api.get(`/purchase-orders/${id}`),
   send: (id) => api.post(`/purchase-orders/${id}/send`),
   updateStatus: (id, data) => api.put(`/purchase-orders/${id}/status`, data),
