@@ -1085,7 +1085,7 @@ const QuoteDetail = () => {
                 <div className="flex gap-3">
                   <div className="flex flex-col items-center">
                     <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
-                      quote.designStatus === 'approved' 
+                      quote.designStatus === 'approved' || quote.designStatus === 'quote_approved'
                         ? 'bg-green-500' 
                         : quote.designStatus === 'in_progress'
                         ? 'bg-blue-500'

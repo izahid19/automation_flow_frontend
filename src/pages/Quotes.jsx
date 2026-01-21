@@ -21,7 +21,8 @@ import {
   Download,
   Edit,
   Calendar,
-  Check
+  Check,
+  Copy
 } from 'lucide-react';
 import {
   Tooltip,
@@ -241,17 +242,17 @@ const Quotes = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary' },
-      quote_submitted: { label: 'Quote Submitted', variant: 'outline' },
-      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline' },
-      manager_approved: { label: 'Manager Approved', variant: 'default' },
-      manager_rejected: { label: 'Manager Rejected', variant: 'destructive' },
-      pending_accountant: { label: 'Pending Accountant', variant: 'outline' },
-      pending_designer: { label: 'Pending Designer', variant: 'outline' },
-      completed_quote: { label: 'Quote Completed', variant: 'default' },
+      draft: { label: 'Draft', variant: 'secondary', className: '' },
+      quote_submitted: { label: 'Quote Submitted', variant: 'outline', className: '' },
+      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500' },
+      manager_approved: { label: 'Manager Approved', variant: 'default', className: 'bg-blue-500 text-white border-blue-500' },
+      manager_rejected: { label: 'Manager Rejected', variant: 'destructive', className: 'bg-red-500 text-white border-red-500' },
+      pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: 'bg-orange-500/10 text-orange-500 border-orange-500' },
+      pending_designer: { label: 'Pending Designer', variant: 'outline', className: 'bg-purple-500/10 text-purple-500 border-purple-500' },
+      completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
     };
-    const s = statusMap[status] || { label: status, variant: 'secondary' };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
   return (
@@ -479,6 +480,14 @@ const Quotes = () => {
                             <Edit size={16} />
                           </Button>
                         )}
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          onClick={() => navigate(`/quotes/new?repeat=${quote._id}`)}
+                          title="Repeat Order"
+                        >
+                          <Copy size={16} />
+                        </Button>
                         <Button
                           variant="ghost"
                           size="icon"

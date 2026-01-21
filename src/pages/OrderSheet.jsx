@@ -91,32 +91,47 @@ const OrderSheet = () => {
     navigate(`/purchase-orders/new?quoteId=${row.quote._id}&itemIndex=${row.itemIndex}`);
   };
 
-  const getQuoteStatusBadge = (status) => {
+  const getQuoteStatusBadge = (quote) => {
+    if (!quote) return <Badge variant="secondary">Unknown</Badge>;
+    
+    const status = quote.status;
+    
+    // For pending_designer, show more specific status based on design workflow
+    if (status === 'pending_designer') {
+      if (quote.designStatus === 'in_progress') {
+        return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500">Design In Progress</Badge>;
+      } else if (!quote.clientDesignApprovedAt) {
+        return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500">Pending Client Approval</Badge>;
+      } else if (quote.clientDesignApprovedAt && !quote.manufacturerDesignApprovedAt) {
+        return <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500">Pending Manufacturer Approval</Badge>;
+      }
+      return <Badge variant="outline">Pending Designer</Badge>;
+    }
+    
     const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary' },
-      pending_accountant: { label: 'Pending Accountant', variant: 'outline' },
-      pending_designer: { label: 'Pending Designer', variant: 'outline' },
-      manager_approved: { label: 'Manager Approved', variant: 'outline' },
-      completed_quote: { label: 'Quote Completed', variant: 'success' },
+      draft: { label: 'Draft', variant: 'secondary', className: '' },
+      pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: '' },
+      manager_approved: { label: 'Manager Approved', variant: 'outline', className: '' },
+      completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
     };
-    const s = statusMap[status] || { label: status, variant: 'secondary' };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
   const getOrderStatusBadge = (status) => {
     const statusMap = {
-      pending: { label: 'Pending', variant: 'outline' },
-      ready_for_po: { label: 'Ready for PO', variant: 'success' },
-      po_created: { label: 'PO Created', variant: 'default' },
-      sent: { label: 'Sent to Client', variant: 'outline' },
-      acknowledged: { label: 'Acknowledged', variant: 'outline' },
-      in_production: { label: 'In Production', variant: 'default' },
-      shipped: { label: 'Shipped', variant: 'default' },
-      delivered: { label: 'Delivered', variant: 'default' },
-      completed: { label: 'Completed', variant: 'default' },
+      pending: { label: 'Pending', variant: 'outline', className: '' },
+      ready_for_po: { label: 'Ready for PO', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+      po_created: { label: 'PO Created', variant: 'default', className: 'bg-orange-500 text-white border-orange-500' },
+      sent: { label: 'Sent to Client', variant: 'outline', className: '' },
+      acknowledged: { label: 'Acknowledged', variant: 'outline', className: '' },
+      in_production: { label: 'In Production', variant: 'default', className: '' },
+      shipped: { label: 'Shipped', variant: 'default', className: '' },
+      delivered: { label: 'Delivered', variant: 'default', className: '' },
+      completed: { label: 'Completed', variant: 'default', className: '' },
     };
-    const s = statusMap[status] || { label: status, variant: 'secondary' };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
 
@@ -170,8 +185,11 @@ const OrderSheet = () => {
                 <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">Quote Status</h3>
                 <div className="flex flex-wrap gap-2">
                   {[
-                    { value: 'pending_accountant', label: 'Payment Pending' },
-                    { value: 'pending_designer', label: 'Design Pending' },
+                    { value: 'pending_designer', label: 'Pending Designer' },
+                    { value: 'design_in_progress', label: 'In Progress' },
+                    { value: 'design_pending_client', label: 'Design Pending Client' },
+                    { value: 'design_pending_manufacturer', label: 'Design Pending Manufacturer' },
+                    { value: 'completed_quote', label: 'Quote Completed' },
                   ].map((status) => (
                     <Badge
                       key={status.value}
@@ -196,7 +214,6 @@ const OrderSheet = () => {
                 <div className="flex flex-wrap gap-2">
                   {[
                     { value: 'pending', label: 'Pending' },
-                    { value: 'ready_for_po', label: 'Ready for PO' },
                     { value: 'po_created', label: 'PO Created' },
                   ].map((status) => (
                     <Badge
@@ -260,13 +277,20 @@ const OrderSheet = () => {
                         {index + 1}
                       </TableCell>
                       <TableCell>
-                        <span className="font-medium">
-                          {row.poNumber || '-'}
-                        </span>
+                        {row.purchaseOrder ? (
+                          <span 
+                            className="text-green-500 font-medium hover:underline cursor-pointer"
+                            onClick={() => navigate(`/purchase-orders/${row.purchaseOrder._id}`)}
+                          >
+                            {row.poNumber}
+                          </span>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                         <span 
-                          className="text-muted-foreground hover:text-primary hover:underline cursor-pointer"
+                          className="text-orange-500 hover:underline cursor-pointer"
                           onClick={() => navigate(`/quotes/${row.quote?._id}`)}
                         >
                           {row.quote?.quoteNumber || 'N/A'}
@@ -299,7 +323,7 @@ const OrderSheet = () => {
                         ₹{itemAmount.toFixed(2)}
                       </TableCell>
                       <TableCell>
-                        {getQuoteStatusBadge(row.quote?.status)}
+                        {getQuoteStatusBadge(row.quote)}
                       </TableCell>
                       <TableCell>
                         {getOrderStatusBadge(row.orderStatus)}

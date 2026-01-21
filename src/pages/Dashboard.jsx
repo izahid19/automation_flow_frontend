@@ -98,15 +98,17 @@ const Dashboard = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary' },
-      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline' },
-      manager_approved: { label: 'Manager Approved', variant: 'default' },
-      manager_rejected: { label: 'Manager Rejected', variant: 'destructive' },
-      design_pending: { label: 'Design Pending', variant: 'outline' },
-      design_approved: { label: 'Design Done', variant: 'default' },
+      draft: { label: 'Draft', variant: 'secondary', className: '' },
+      quote_submitted: { label: 'Quote Submitted', variant: 'outline', className: '' },
+      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500' },
+      manager_approved: { label: 'Manager Approved', variant: 'default', className: 'bg-blue-500 text-white border-blue-500' },
+      manager_rejected: { label: 'Manager Rejected', variant: 'destructive', className: 'bg-red-500 text-white border-red-500' },
+      pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: 'bg-orange-500/10 text-orange-500 border-orange-500' },
+      pending_designer: { label: 'Pending Designer', variant: 'outline', className: 'bg-purple-500/10 text-purple-500 border-purple-500' },
+      completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
     };
-    const s = statusMap[status] || { label: status, variant: 'secondary' };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
   if (loading) {
@@ -200,6 +202,10 @@ const Dashboard = () => {
                 <TableRow>
                   <TableHead>Quote #</TableHead>
                   <TableHead>Client</TableHead>
+                  <TableHead>Quote Item Names</TableHead>
+                  <TableHead>Quantity</TableHead>
+                  <TableHead>MRP</TableHead>
+                  <TableHead>Our Rate</TableHead>
                   <TableHead>Amount</TableHead>
                   <TableHead>Status</TableHead>
                   <TableHead>Date</TableHead>
@@ -222,10 +228,43 @@ const Dashboard = () => {
                         <p className="text-xs text-muted-foreground">{quote.clientEmail}</p>
                       </div>
                     </TableCell>
+                    <TableCell>
+                      <div className="max-w-[200px]">
+                        {quote.items && quote.items.length > 0 ? (
+                          <span className="text-sm">
+                            {quote.items.map(item => item.brandName || item.name).join(', ')}
+                          </span>
+                        ) : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      {quote.items && quote.items.length > 0 ? (
+                        <span className="text-sm">
+                          {quote.items.map(item => item.quantity).join(', ')}
+                        </span>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {quote.items && quote.items.length > 0 ? (
+                        <span className="text-sm">
+                          {quote.items.map(item => item.mrp ? `₹${item.mrp}` : '-').join(', ')}
+                        </span>
+                      ) : '-'}
+                    </TableCell>
+                    <TableCell>
+                      {quote.items && quote.items.length > 0 ? (
+                        <span className="text-sm">
+                          {quote.items.map(item => item.rate ? `₹${item.rate}` : '-').join(', ')}
+                        </span>
+                      ) : '-'}
+                    </TableCell>
                     <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
-                      {new Date(quote.createdAt).toLocaleDateString('en-GB')}
+                      <div className="flex flex-col">
+                        <span className="font-medium">{new Date(quote.createdAt).toLocaleDateString('en-GB')}</span>
+                        <span className="text-xs text-muted-foreground">{new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))}

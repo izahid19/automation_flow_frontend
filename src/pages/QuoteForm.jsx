@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { quoteAPI, settingsAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
@@ -63,9 +63,12 @@ const QuoteForm = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const repeatQuoteId = searchParams.get('repeat');
   const isEditMode = !!id;
+  const isRepeatMode = !!repeatQuoteId;
   const [loading, setLoading] = useState(false);
-  const [loadingQuote, setLoadingQuote] = useState(isEditMode);
+  const [loadingQuote, setLoadingQuote] = useState(isEditMode || isRepeatMode);
   const [errors, setErrors] = useState({});
   const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState({
@@ -127,6 +130,52 @@ const QuoteForm = () => {
     
     fetchQuote();
   }, [id, isEditMode, navigate]);
+
+  // Fetch quote data if in repeat mode (to pre-populate form)
+  useEffect(() => {
+    const fetchRepeatQuote = async () => {
+      if (!isRepeatMode) return;
+      
+      try {
+        setLoadingQuote(true);
+        const response = await quoteAPI.getOne(repeatQuoteId);
+        const quote = response.data.data;
+        
+        // Map quote data to form data structure, setting orderType to 'Repeat'
+        const repeatItems = quote.items && quote.items.length > 0 
+          ? quote.items.map(item => ({
+              ...item,
+              orderType: 'Repeat', // Set order type to Repeat for all items
+            }))
+          : [{ ...DEFAULT_ITEM, orderType: 'Repeat' }];
+        
+        setFormData({
+          partyName: quote.clientName || '',
+          marketedBy: quote.marketedBy || '',
+          clientEmail: quote.clientEmail || '',
+          clientPhone: quote.clientPhone || '',
+          clientAddress: quote.clientAddress || '',
+          items: repeatItems,
+          discountPercent: quote.discountPercent || 0,
+          taxPercent: quote.taxPercent || 5,
+          taxPercentOnCharges: 18, // Fixed at 18%
+          cylinderCharges: quote.cylinderCharges || 0,
+          numberOfCylinders: quote.numberOfCylinders || 2,
+          inventoryCharges: quote.inventoryCharges || 0,
+          terms: quote.terms || 'Payment due within 30 days. All prices in INR.',
+          bankDetails: quote.bankDetails || '',
+        });
+        toast.success('Quote data loaded for repeat order');
+      } catch (error) {
+        toast.error('Failed to load quote for repeat order');
+        navigate('/quotes');
+      } finally {
+        setLoadingQuote(false);
+      }
+    };
+    
+    fetchRepeatQuote();
+  }, [repeatQuoteId, isRepeatMode, navigate]);
 
   // Fetch default settings on component mount
   useEffect(() => {
@@ -418,8 +467,8 @@ const QuoteForm = () => {
             <ArrowLeft size={20} />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Quote' : 'Create New Quote'}</h1>
-            <p className="text-muted-foreground">{isEditMode ? 'Update the quote details' : 'Fill in the details to create a quotation'}</p>
+            <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Quote' : isRepeatMode ? 'Repeat Order' : 'Create New Quote'}</h1>
+            <p className="text-muted-foreground">{isEditMode ? 'Update the quote details' : isRepeatMode ? 'Create a new quote based on previous order' : 'Fill in the details to create a quotation'}</p>
           </div>
         </div>
         <Button
