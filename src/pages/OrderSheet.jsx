@@ -182,33 +182,7 @@ const OrderSheet = () => {
                 </Badge>
               </div>
 
-              {/* Quote Status */}
-              <div className="space-y-2.5">
-                <h3 className="text-xs font-semibold text-muted-foreground uppercase tracking-wider ml-1">Quote Status</h3>
-                <div className="flex flex-wrap gap-2">
-                  {[
-                    { value: 'pending_designer', label: 'Pending Designer' },
-                    { value: 'design_in_progress', label: 'In Progress' },
-                    { value: 'design_pending_client', label: 'Design Pending Client' },
-                    { value: 'design_pending_manufacturer', label: 'Design Pending Manufacturer' },
-                    { value: 'completed_quote', label: 'Quote Completed' },
-                  ].map((status) => (
-                    <Badge
-                      key={status.value}
-                      variant="outline"
-                      className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
-                        statusFilter.includes(status.value)
-                          ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
-                          : "text-muted-foreground hover:bg-muted/50"
-                      }`}
-                      onClick={() => toggleStatus(status.value)}
-                    >
-                      {statusFilter.includes(status.value) && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
-                      {status.label}
-                    </Badge>
-                  ))}
-                </div>
-              </div>
+
 
               {/* Order Status */}
               <div className="space-y-2.5">
@@ -260,9 +234,10 @@ const OrderSheet = () => {
                   <TableHead>Client</TableHead>
                   <TableHead>Item Name</TableHead>
                   <TableHead>Quantity</TableHead>
+                  <TableHead>MRP</TableHead>
                   <TableHead>Rate</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Quote Status</TableHead>
+
                   <TableHead>Order Status</TableHead>
                   <TableHead>Manufacturer</TableHead>
                   <TableHead>Date</TableHead>
@@ -318,15 +293,18 @@ const OrderSheet = () => {
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
+                          {row.item ? `₹${row.item.mrp || '0'}` : '-'}
+                        </span>
+                      </TableCell>
+                      <TableCell>
+                        <span className="text-sm">
                           {row.item ? `₹${row.item.rate || '0'}` : '-'}
                         </span>
                       </TableCell>
                       <TableCell className="font-semibold">
                         ₹{itemAmount.toFixed(2)}
                       </TableCell>
-                      <TableCell>
-                        {getQuoteStatusBadge(row.quote)}
-                      </TableCell>
+
                       <TableCell>
                         {getOrderStatusBadge(row.orderStatus)}
                       </TableCell>
