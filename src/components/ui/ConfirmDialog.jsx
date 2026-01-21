@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { AlertTriangle, LogOut } from 'lucide-react';
+import { createPortal } from 'react-dom';
 
 const ConfirmDialog = ({ 
   isOpen, 
@@ -19,7 +20,7 @@ const ConfirmDialog = ({
   const iconBgClass = isDestructive ? "bg-red-500/10" : "bg-primary/10";
   const iconTextClass = isDestructive ? "text-red-500" : "text-primary";
 
-  return (
+  return createPortal(
     <div className="modal-overlay" onClick={onClose}>
       <div className="modal-content max-w-sm" onClick={(e) => e.stopPropagation()}>
         <div className="flex flex-col items-center text-center">
@@ -48,7 +49,8 @@ const ConfirmDialog = ({
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

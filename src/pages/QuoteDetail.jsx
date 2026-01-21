@@ -26,6 +26,8 @@ import { Card, CardContent, CardHeader, CardTitle } from '../components/ui/card'
 import { Separator } from '../components/ui/separator';
 import { Label } from '../components/ui/label';
 
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
+
 const QuoteDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -38,12 +40,25 @@ const QuoteDetail = () => {
   const [downloadLoading, setDownloadLoading] = useState(false);
   const [comments, setComments] = useState('');
   const [showPreview, setShowPreview] = useState(false);
+  const [showVerifyConfirm, setShowVerifyConfirm] = useState(false);
   const previewRef = useRef(null);
   const [companySettings, setCompanySettings] = useState({
     companyPhone: '+917696275527',
     companyEmail: 'user@gmail.com',
     invoiceLabel: 'QUOTATION'
   });
+
+  /* State for Client Order Status update */
+  const [selectedClientStatus, setSelectedClientStatus] = useState('pending');
+  const [advanceAmountInput, setAdvanceAmountInput] = useState('');
+
+  // Sync state when quote loads
+  useEffect(() => {
+    if (quote) {
+      setSelectedClientStatus(quote.clientOrderStatus || 'pending');
+      if (quote.advanceAmount) setAdvanceAmountInput(quote.advanceAmount);
+    }
+  }, [quote]);
 
   useEffect(() => {
     fetchQuote();
@@ -136,11 +151,19 @@ const QuoteDetail = () => {
     }
   };
 
-  const handleUpdateClientOrderStatus = async (status) => {
+  const handleUpdateClientOrderStatus = async () => {
+    if (selectedClientStatus === 'approved' && !advanceAmountInput) {
+      toast.error('Please enter the advance amount received');
+      return;
+    }
+
     setActionLoading(true);
     try {
-      await quoteAPI.updateClientOrderStatus(id, { clientOrderStatus: status });
-      toast.success(`Client order status updated to ${status}`);
+      await quoteAPI.updateClientOrderStatus(id, { 
+        clientOrderStatus: selectedClientStatus,
+        advanceAmount: selectedClientStatus === 'approved' ? Number(advanceAmountInput) : undefined
+      });
+      toast.success(`Client order status updated to ${selectedClientStatus}`);
       fetchQuote();
     } catch (error) {
       toast.error('Failed to update client order status');
@@ -253,7 +276,7 @@ const QuoteDetail = () => {
   if (!quote) return null;
 
   const canApproveManager = (isAdmin || isManager) && quote.status === 'pending_manager_approval';
-  const canUpdateClientOrderStatus = (isAdmin || isManager) && quote.status === 'manager_approved' && quote.clientOrderStatus === 'pending';
+  const canUpdateClientOrderStatus = (isAdmin || isSalesExecutive) && quote.status === 'manager_approved' && quote.clientOrderStatus === 'pending';
   const canConfirmAdvancePayment = (isAdmin || isAccountant || isManager) && quote.status === 'pending_accountant';
   const canUpdateDesign = (isAdmin || isDesigner || isManager) && quote.status === 'pending_designer';
   const canSubmit = quote.status === 'draft' || quote.status === 'manager_rejected';
@@ -624,14 +647,14 @@ const QuoteDetail = () => {
 
           {/* Client Order Status (Manager) */}
           {canUpdateClientOrderStatus && (
-            <div className="card">
+        <div className="card">
               <h2 className="text-lg font-semibold mb-4">Client Order Status</h2>
               <div className="space-y-4">
                 <div>
                   <label className="block text-sm font-medium mb-2">Status</label>
                   <select
-                    value={quote.clientOrderStatus || 'pending'}
-                    onChange={(e) => handleUpdateClientOrderStatus(e.target.value)}
+                    value={selectedClientStatus}
+                    onChange={(e) => setSelectedClientStatus(e.target.value)}
                     disabled={actionLoading}
                     className="input"
                   >
@@ -639,8 +662,34 @@ const QuoteDetail = () => {
                     <option value="approved">Approved</option>
                   </select>
                 </div>
-                <p className="text-sm text-muted-foreground">
-                  When set to "Approved", the quote will be sent to Accountant.
+                
+                {selectedClientStatus === 'approved' && (
+                  <div>
+                    <label className="block text-sm font-medium mb-2">Advance Amount Received (₹)</label>
+                    <input
+                      type="number"
+                      value={advanceAmountInput}
+                      onChange={(e) => setAdvanceAmountInput(e.target.value)}
+                      placeholder="Enter amount"
+                      className="input"
+                      disabled={actionLoading}
+                    />
+                  </div>
+                )}
+
+                <div className="flex justify-end pt-2">
+                  <button
+                    onClick={handleUpdateClientOrderStatus}
+                    disabled={actionLoading}
+                    className="btn btn-primary"
+                  >
+                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Check size={16} className="mr-2" />}
+                    Update Status
+                  </button>
+                </div>
+
+                <p className="text-sm text-muted-foreground mt-2">
+                  When set to "Approved", the quote will be sent to the Accountant for verification.
                 </p>
               </div>
             </div>
@@ -651,20 +700,47 @@ const QuoteDetail = () => {
             <div className="card">
               <h2 className="text-lg font-semibold mb-4">Accountant Action</h2>
               <div className="space-y-4">
+                <div className="bg-muted/50 p-4 rounded-lg space-y-2">
+                  <div className="flex justify-between items-center">
+                    <span className="text-muted-foreground">Quote Total:</span>
+                    <span className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</span>
+                  </div>
+                  <div className="flex justify-between items-center text-primary">
+                    <span className="font-medium">Advance Amount Reported:</span>
+                    <span className="font-bold text-lg">₹{quote.advanceAmount?.toFixed(2) || '0.00'}</span>
+                  </div>
+                  <div className="text-xs text-muted-foreground pt-1">
+                    Received by Sales Executive/Admin
+                  </div>
+                </div>
+
                 <p className="text-sm text-muted-foreground">
-                  Confirm that advance payment has been received from the client.
+                  Confirm that the advance payment listed above has been received in the bank account.
                 </p>
                 <button
-                  onClick={handleConfirmAdvancePayment}
+                  onClick={() => setShowVerifyConfirm(true)}
                   disabled={actionLoading}
                   className="btn btn-success w-full"
                 >
                   {actionLoading ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check size={18} />}
-                  Confirm Advance Payment Received
+                  Verify & Confirm Payment
                 </button>
               </div>
             </div>
           )}
+
+      <ConfirmDialog
+        isOpen={showVerifyConfirm}
+        onClose={() => setShowVerifyConfirm(false)}
+        onConfirm={() => {
+          setShowVerifyConfirm(false);
+          handleConfirmAdvancePayment();
+        }}
+        title="Verify Advance Payment"
+        message={`Are you sure you want to verify that ₹${quote.advanceAmount?.toFixed(2)} has been received? This will move the quote to the Designer.`}
+        confirmText="Verify Payment"
+        variant="default"
+      />
 
           {/* Designer Actions */}
           {canUpdateDesign && (
@@ -891,10 +967,16 @@ const QuoteDetail = () => {
                 <span>Total</span>
                 <span className="text-primary">₹{quote.totalAmount?.toFixed(2)}</span>
               </div>
-              {(isAccountant || isAdmin) && (
-                <div className="flex justify-between font-semibold text-amber-600">
-                  <span>Advance Amount (30%)</span>
-                  <span>₹{((quote.totalAmount || 0) * 0.30).toFixed(2)}</span>
+              
+              <div className="flex justify-between font-medium text-muted-foreground pt-2">
+                <span>Advance Payment (35%)</span>
+                <span>₹{((quote.totalAmount || 0) * 0.35).toFixed(2)}</span>
+              </div>
+
+              {quote.advanceAmount > 0 && (
+                <div className="flex justify-between font-medium text-green-500">
+                  <span>Advance Received</span>
+                  <span>-₹{quote.advanceAmount.toFixed(2)}</span>
                 </div>
               )}
             </div>
@@ -1017,6 +1099,11 @@ const QuoteDetail = () => {
                           minute: '2-digit',
                           hour12: true
                         })}
+                      </p>
+                    )}
+                    {quote.advanceAmount && (
+                      <p className="text-xs text-green-500 mt-1 font-medium">
+                        Advance Received: ₹{quote.advanceAmount?.toFixed(2)}
                       </p>
                     )}
                   </div>
