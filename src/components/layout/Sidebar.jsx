@@ -15,10 +15,12 @@ import {
   Menu,
   Tag,
   Mail,
+  PanelLeftClose,
+  PanelLeftOpen,
 } from 'lucide-react';
 import { useState } from 'react';
 
-const Sidebar = () => {
+const Sidebar = ({ collapsed, setCollapsed }) => {
   const { user, logout } = useAuth();
   const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
@@ -45,10 +47,20 @@ const Sidebar = () => {
   const SidebarContent = () => (
     <div className="flex flex-col h-full">
       {/* Logo */}
-      <div className="p-6">
-        <h1 className="text-xl font-bold bg-gradient-to-r from-primary to-orange-400 bg-clip-text text-transparent">
-          Quote Manager
-        </h1>
+      <div className={`p-4 flex items-center ${collapsed ? 'justify-center' : 'justify-between'}`}>
+        {!collapsed && (
+          <h1 className="text-xl font-bold bg-linear-to-r from-primary to-orange-400 bg-clip-text text-transparent whitespace-nowrap overflow-hidden">
+            Quote Manager
+          </h1>
+        )}
+        <Button 
+          variant="ghost" 
+          size="icon" 
+          onClick={() => setCollapsed(!collapsed)}
+          className={collapsed ? '' : 'ml-auto'}
+        >
+          {collapsed ? <PanelLeftOpen size={20} /> : <PanelLeftClose size={20} />}
+        </Button>
       </div>
 
       <Separator />
@@ -63,13 +75,14 @@ const Sidebar = () => {
             className={({ isActive }) =>
               `flex items-center gap-3 px-4 py-3 rounded-lg transition-all ${
                 isActive
-                  ? 'bg-primary text-white shadow-sm [text-shadow:_0_1px_2px_rgba(0,0,0,0.2)]'
+                  ? 'bg-primary text-white shadow-sm [text-shadow:0_1px_2px_rgba(0,0,0,0.2)]'
                   : 'text-muted-foreground hover:bg-accent hover:text-accent-foreground'
-              }`
+              } ${collapsed ? 'justify-center' : ''}`
             }
+            title={collapsed ? item.label : ''}
           >
             <item.icon size={20} />
-            <span className="font-medium">{item.label}</span>
+            {!collapsed && <span className="font-medium whitespace-nowrap overflow-hidden">{item.label}</span>}
           </NavLink>
         ))}
       </nav>
@@ -78,36 +91,39 @@ const Sidebar = () => {
 
       {/* User Section */}
       <div className="p-4">
-        <div className="flex items-center gap-3 px-4 py-3 mb-2">
+        <div className={`flex items-center gap-3 px-4 py-3 mb-2 ${collapsed ? 'justify-center' : ''}`}>
           <Avatar className="h-10 w-10">
-            <AvatarFallback className="bg-gradient-to-br from-primary to-orange-400 text-white font-bold">
+            <AvatarFallback className="bg-linear-to-br from-primary to-orange-400 text-white font-bold">
               {user?.name?.charAt(0).toUpperCase()}
             </AvatarFallback>
           </Avatar>
-          <div className="flex-1 min-w-0">
-            <p className="font-medium truncate">{user?.name}</p>
-            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
-              user?.role === 'admin' 
-                ? 'bg-red-500/20 text-red-400' 
-                : user?.role === 'manager' 
-                ? 'bg-green-500/20 text-green-400'
-                : user?.role === 'designer'
-                ? 'bg-yellow-500/20 text-yellow-400'
-                : user?.role === 'accountant'
-                ? 'bg-purple-500/20 text-purple-400'
-                : 'bg-blue-500/20 text-blue-400'
-            }`}>
-              {user?.role === 'sales_executive' ? 'Sales' : user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
-            </span>
-          </div>
+          {!collapsed && (
+            <div className="flex-1 min-w-0 animate-fade-in">
+              <p className="font-medium truncate">{user?.name}</p>
+              <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium mt-1 ${
+                user?.role === 'admin' 
+                  ? 'bg-red-500/20 text-red-400' 
+                  : user?.role === 'manager' 
+                  ? 'bg-green-500/20 text-green-400'
+                  : user?.role === 'designer'
+                  ? 'bg-yellow-500/20 text-yellow-400'
+                  : user?.role === 'accountant'
+                  ? 'bg-purple-500/20 text-purple-400'
+                  : 'bg-blue-500/20 text-blue-400'
+              }`}>
+                {user?.role === 'sales_executive' ? 'Sales' : user?.role?.charAt(0).toUpperCase() + user?.role?.slice(1)}
+              </span>
+            </div>
+          )}
         </div>
         <Button
           variant="ghost"
           onClick={() => setShowLogoutConfirm(true)}
-          className="w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10"
+          className={`w-full justify-start text-muted-foreground hover:text-destructive hover:bg-destructive/10 ${collapsed ? 'justify-center px-2' : ''}`}
+          title={collapsed ? "Logout" : ""}
         >
-          <LogOut size={20} className="mr-3" />
-          Logout
+          <LogOut size={20} className={collapsed ? "" : "mr-3"} />
+          {!collapsed && "Logout"}
         </Button>
       </div>
     </div>
@@ -130,7 +146,7 @@ const Sidebar = () => {
       </div>
 
       {/* Desktop Sidebar */}
-      <aside className="hidden lg:flex fixed top-0 left-0 h-full w-64 bg-sidebar border-r border-sidebar-border flex-col">
+      <aside className={`hidden lg:flex fixed top-0 left-0 h-full bg-sidebar border-r border-sidebar-border flex-col transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}>
         <SidebarContent />
       </aside>
 
