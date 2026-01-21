@@ -13,6 +13,7 @@ import {
   Download,
   Plus,
   Calendar,
+  Check,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -24,6 +25,7 @@ const CompletedOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
@@ -135,6 +137,11 @@ const CompletedOrders = () => {
         }
       }
 
+      // Add status filtering
+      if (statusFilter && statusFilter !== 'all') {
+        params.append('status', statusFilter);
+      }
+
       const response = await axios.get(`${API_URL}/purchase-orders?${params}`, {
         headers: { Authorization: `Bearer ${token}` }
       });
@@ -147,7 +154,7 @@ const CompletedOrders = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, pagination.page, dateFilter, customDateFrom, customDateTo]);
+  }, [search, pagination.page, dateFilter, statusFilter, customDateFrom, customDateTo]);
 
   useEffect(() => {
     fetchOrders();
@@ -172,16 +179,17 @@ const CompletedOrders = () => {
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary' },
-      sent: { label: 'Sent to Manufacturer', variant: 'outline' },
-      acknowledged: { label: 'Acknowledged', variant: 'outline' },
-      in_production: { label: 'In Production', variant: 'default' },
-      shipped: { label: 'Shipped', variant: 'default' },
-      delivered: { label: 'Delivered', variant: 'default' },
-      completed: { label: 'Completed', variant: 'default' },
+      draft: { label: 'Draft', variant: 'secondary', className: '' },
+      sent: { label: 'PO Created', variant: 'default', className: 'bg-orange-500 text-white border-orange-500' },
+      acknowledged: { label: 'Acknowledged', variant: 'outline', className: '' },
+      in_production: { label: 'In Production', variant: 'default', className: 'bg-blue-500/10 text-blue-500 border-blue-500' },
+      shipped: { label: 'Shipped', variant: 'default', className: 'bg-indigo-500/10 text-indigo-500 border-indigo-500' },
+      delivered: { label: 'Delivered', variant: 'default', className: 'bg-purple-500/10 text-purple-500 border-purple-500' },
+      completed: { label: 'Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+      po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-600 text-white border-green-600' },
     };
-    const s = statusMap[status] || { label: status, variant: 'secondary' };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
   return (
@@ -222,6 +230,29 @@ const CompletedOrders = () => {
                   <SelectItem value="custom">{getDateFilterLabel('custom')}</SelectItem>
                 </SelectContent>
               </Select>
+            </div>
+
+            {/* Status Filter Chips */}
+            <div className="flex flex-wrap gap-2">
+              {[
+                { value: 'all', label: 'All' },
+                { value: 'sent', label: 'PO Created' },
+                { value: 'po_completed', label: 'PO Completed' },
+              ].map((status) => (
+                <Badge
+                  key={status.value}
+                  variant="outline"
+                  className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
+                    statusFilter === status.value
+                      ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
+                      : "text-white border-white/50 hover:bg-white/10"
+                  }`}
+                  onClick={() => setStatusFilter(status.value)}
+                >
+                  {statusFilter === status.value && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
+                  {status.label}
+                </Badge>
+              ))}
             </div>
             {dateFilter === 'custom' && (
               <div className="flex items-center gap-2 flex-wrap">
@@ -300,9 +331,11 @@ const CompletedOrders = () => {
                   <TableHead>Quote Number</TableHead>
                   <TableHead>Manufacturer</TableHead>
                   <TableHead>Quote Item Name</TableHead>
+                  <TableHead>Order Type</TableHead>
                   <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
+                  <TableHead>Order Status</TableHead>
                   <TableHead>Created Date</TableHead>
+                  <TableHead>Delivery Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -310,7 +343,10 @@ const CompletedOrders = () => {
                 {orders.map((order) => (
                   <TableRow key={order._id}>
                     <TableCell>
-                      <span className="text-primary font-medium">
+                      <span 
+                        className="text-primary font-medium cursor-pointer hover:underline"
+                        onClick={() => navigate(`/purchase-orders/${order._id}`)}
+                      >
                         {order.poNumber}
                       </span>
                     </TableCell>
@@ -344,10 +380,35 @@ const CompletedOrders = () => {
                          )}
                       </div>
                     </TableCell>
+                    <TableCell>
+                      {order.items?.length > 0 && (
+                        <span 
+                           className={`badge badge-outline text-xs px-2 py-0.5 rounded-full border w-fit ${
+                             order.items[0].orderType === 'Repeat'
+                               ? 'bg-red-500/10 text-red-500 border-red-500'
+                               : 'bg-green-500/10 text-green-500 border-green-500'
+                           }`}
+                         >
+                           {order.items[0].orderType || 'New'}
+                         </span>
+                      )}
+                    </TableCell>
                     <TableCell className="font-semibold">₹{order.totalAmount?.toFixed(2) || '0.00'}</TableCell>
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    </TableCell>
+                    <TableCell>
+                      {(() => {
+                        const createdDate = new Date(order.createdAt);
+                        const deliveryDate = new Date(createdDate);
+                        deliveryDate.setDate(deliveryDate.getDate() + 45);
+                        return (
+                          <span className="font-medium text-primary">
+                            {deliveryDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
+                          </span>
+                        );
+                      })()}
                     </TableCell>
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">

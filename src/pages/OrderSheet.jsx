@@ -131,6 +131,7 @@ const OrderSheet = () => {
       shipped: { label: 'Shipped', variant: 'default', className: '' },
       delivered: { label: 'Delivered', variant: 'default', className: '' },
       completed: { label: 'Completed', variant: 'default', className: '' },
+      po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-600 text-white border-green-600' },
     };
     const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
@@ -201,7 +202,7 @@ const OrderSheet = () => {
                       className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
                         statusFilter.includes(status.value)
                           ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
-                          : "text-muted-foreground hover:bg-muted/50"
+                          : "text-white border-white/50 hover:bg-white/10"
                       }`}
                       onClick={() => toggleStatus(status.value)}
                     >
@@ -219,6 +220,7 @@ const OrderSheet = () => {
                   {[
                     { value: 'pending', label: 'Pending' },
                     { value: 'po_created', label: 'PO Created' },
+                    { value: 'po_completed', label: 'PO Completed' },
                   ].map((status) => (
                     <Badge
                       key={status.value}
@@ -226,7 +228,7 @@ const OrderSheet = () => {
                       className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
                         statusFilter.includes(status.value)
                           ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
-                          : "text-muted-foreground hover:bg-muted/50"
+                          : "text-white border-white/50 hover:bg-white/10"
                       }`}
                       onClick={() => toggleStatus(status.value)}
                     >
@@ -256,11 +258,11 @@ const OrderSheet = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead className="w-16">S.No</TableHead>
                   <TableHead>PO Number</TableHead>
                   <TableHead>Quote Number</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead>Client Name</TableHead>
                   <TableHead>Item Name</TableHead>
+                  <TableHead>Order Type</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>MRP</TableHead>
                   <TableHead>Rate</TableHead>
@@ -268,7 +270,8 @@ const OrderSheet = () => {
                   <TableHead>Quote Status</TableHead>
                   <TableHead>Order Status</TableHead>
                   <TableHead>Manufacturer</TableHead>
-                  <TableHead>Date</TableHead>
+                  <TableHead>Created Date</TableHead>
+                  <TableHead>Delivery Date</TableHead>
                   <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
@@ -278,9 +281,6 @@ const OrderSheet = () => {
                   
                   return (
                     <TableRow key={row._id}>
-                      <TableCell className="font-medium text-muted-foreground">
-                        {index + 1}
-                      </TableCell>
                       <TableCell>
                         {row.purchaseOrder ? (
                           <span 
@@ -302,10 +302,10 @@ const OrderSheet = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div>
-                          <p className="font-medium">{row.quote?.clientName || 'N/A'}</p>
+                        <div className="max-w-[180px]">
+                          <p className="font-medium truncate" title={row.quote?.clientName}>{row.quote?.clientName || 'N/A'}</p>
                           {row.quote?.clientEmail && (
-                            <p className="text-xs text-muted-foreground">{row.quote.clientEmail}</p>
+                            <p className="text-xs text-muted-foreground truncate" title={row.quote.clientEmail}>{row.quote.clientEmail}</p>
                           )}
                         </div>
                       </TableCell>
@@ -313,6 +313,17 @@ const OrderSheet = () => {
                         <span className="font-medium text-sm">
                           {row.item?.brandName || row.item?.name || '-'}
                         </span>
+                      </TableCell>
+                      <TableCell>
+                        <span 
+                           className={`badge badge-outline text-xs px-2 py-0.5 rounded-full border w-fit ${
+                             row.item?.orderType === 'Repeat'
+                               ? 'bg-red-500/10 text-red-500 border-red-500'
+                               : 'bg-green-500/10 text-green-500 border-green-500'
+                           }`}
+                         >
+                           {row.item?.orderType || 'New'}
+                         </span>
                       </TableCell>
                       <TableCell>
                         <span className="text-sm">
@@ -344,10 +355,32 @@ const OrderSheet = () => {
                         </span>
                       </TableCell>
                       <TableCell>
-                        <div className="flex flex-col">
-                          <span className="font-medium text-muted-foreground">{new Date(row.createdAt).toLocaleDateString('en-GB')}</span>
-                          <span className="text-xs text-muted-foreground">{new Date(row.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
-                        </div>
+                        {row.purchaseOrder ? (
+                          <div className="flex flex-col">
+                            <span className="font-medium text-muted-foreground">
+                              {new Date(row.purchaseOrder.createdAt).toLocaleDateString('en-GB')}
+                            </span>
+                            <span className="text-xs text-muted-foreground">
+                              {new Date(row.purchaseOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                            </span>
+                          </div>
+                        ) : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
+                      </TableCell>
+                      <TableCell>
+                        {row.purchaseOrder ? (() => {
+                          const createdDate = new Date(row.purchaseOrder.createdAt || row.createdAt);
+                          const deliveryDate = new Date(createdDate);
+                          deliveryDate.setDate(deliveryDate.getDate() + 45);
+                          return (
+                            <span className="font-medium text-primary">
+                              {deliveryDate.toLocaleDateString('en-GB')}
+                            </span>
+                          );
+                        })() : (
+                          <span className="text-muted-foreground">-</span>
+                        )}
                       </TableCell>
                       <TableCell>
                           <div className="flex items-center justify-end gap-1">
@@ -366,15 +399,27 @@ const OrderSheet = () => {
                             </Button>
                             {(isAdmin || isManager) && (
                               row.purchaseOrder ? (
-                                <Button
-                                  variant="outline"
-                                  size="sm"
-                                  disabled
-                                  className="gap-1 bg-green-100 text-green-700 border-green-200 opacity-100 disabled:opacity-100"
-                                >
-                                  <CheckCircle size={14} className="text-green-600" />
-                                  Created
-                                </Button>
+                                row.orderStatus === 'po_completed' ? (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    className="gap-1 bg-green-600 text-white border-green-600 opacity-100 disabled:opacity-100"
+                                  >
+                                    <CheckCircle size={14} className="text-white" />
+                                    Completed
+                                  </Button>
+                                ) : (
+                                  <Button
+                                    variant="outline"
+                                    size="sm"
+                                    disabled
+                                    className="gap-1 bg-green-600 text-white border-green-600 opacity-100 disabled:opacity-100"
+                                  >
+                                    <CheckCircle size={14} className="text-white" />
+                                    Created
+                                  </Button>
+                                )
                               ) : (
                                 <Button
                                   variant="default"

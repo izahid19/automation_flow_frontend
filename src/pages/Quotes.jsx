@@ -349,7 +349,7 @@ const Quotes = () => {
                   className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
                     statusFilter.includes(status.value)
                       ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
-                      : "text-muted-foreground hover:bg-muted/50"
+                      : "text-white border-white/50 hover:bg-white/10"
                   }`}
                   onClick={() => toggleStatus(status.value)}
                 >
@@ -384,6 +384,7 @@ const Quotes = () => {
                   <TableHead>Quote Number</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Quote Item Names</TableHead>
+                  <TableHead>Order Type</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>MRP</TableHead>
                   <TableHead>Our Rate</TableHead>
@@ -421,6 +422,24 @@ const Quotes = () => {
                         ) : (
                           <span className="text-muted-foreground text-sm">-</span>
                         )}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {quote.items?.length > 0 ? (
+                           quote.items.map((item, index) => (
+                             <span 
+                               key={index} 
+                               className={`badge badge-outline text-xs px-2 py-0.5 rounded-full border w-fit ${
+                                 item.orderType === 'Repeat'
+                                   ? 'bg-red-500/10 text-red-500 border-red-500'
+                                   : 'bg-green-500/10 text-green-500 border-green-500'
+                               }`}
+                             >
+                               {item.orderType || 'New'}
+                             </span>
+                           ))
+                        ) : '-'}
                       </div>
                     </TableCell>
                     <TableCell>

@@ -79,6 +79,7 @@ export const orderAPI = {
   send: (id) => api.post(`/purchase-orders/${id}/send`),
   updateStatus: (id, data) => api.put(`/purchase-orders/${id}/status`, data),
   delete: (id) => api.delete(`/purchase-orders/${id}`),
+  verifyFullPayment: (id) => api.put(`/purchase-orders/${id}/verify-payment`),
 };
 
 // Manufacturer APIs

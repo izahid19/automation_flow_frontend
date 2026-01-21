@@ -33,7 +33,7 @@ const Dashboard = () => {
     try {
       const [statsRes, quotesRes] = await Promise.all([
         quoteAPI.getStats(),
-        quoteAPI.getAll({ limit: 5 }),
+        quoteAPI.getAll({ limit: 10 }),
       ]);
       setStats(statsRes.data.data);
       setRecentQuotes(quotesRes.data.data);
@@ -78,13 +78,20 @@ const Dashboard = () => {
     },
     {
       title: 'Pending Approval',
-      value: getStatusCount('pending_manager_approval'),
+      value: getStatusCount('pending_manager_approval') + getStatusCount('pending_se_approval') + getStatusCount('pending_md_approval'),
       icon: Clock,
       gradient: 'from-amber-500 to-orange-500',
     },
     {
       title: 'Approved',
-      value: getStatusCount('manager_approved') + getStatusCount('design_approved'),
+      value: getStatusCount('manager_approved') + 
+             getStatusCount('design_approved') + 
+             getStatusCount('pending_accountant') + 
+             getStatusCount('pending_designer') + 
+             getStatusCount('design_pending') + 
+             getStatusCount('ready_for_po') + 
+             getStatusCount('po_created') + 
+             getStatusCount('completed_quote'),
       icon: CheckCircle2,
       gradient: 'from-emerald-500 to-green-500',
     },
@@ -207,6 +214,7 @@ const Dashboard = () => {
                   <TableHead>Quote #</TableHead>
                   <TableHead>Client</TableHead>
                   <TableHead>Quote Item Names</TableHead>
+                  <TableHead>Order Type</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>MRP</TableHead>
                   <TableHead>Our Rate</TableHead>
@@ -233,34 +241,66 @@ const Dashboard = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="max-w-[200px]">
+                      <div className="flex flex-col gap-1 max-w-[200px]">
                         {quote.items && quote.items.length > 0 ? (
-                          <span className="text-sm">
-                            {quote.items.map(item => item.brandName || item.name).join(', ')}
-                          </span>
+                          quote.items.map((item, index) => (
+                            <span key={index} className="text-sm font-medium">
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.brandName || item.name}
+                            </span>
+                          ))
                         ) : '-'}
                       </div>
                     </TableCell>
                     <TableCell>
-                      {quote.items && quote.items.length > 0 ? (
-                        <span className="text-sm">
-                          {quote.items.map(item => item.quantity).join(', ')}
-                        </span>
-                      ) : '-'}
+                      <div className="flex flex-col gap-1">
+                        {quote.items && quote.items.length > 0 ? (
+                           quote.items.map((item, index) => (
+                             <span 
+                               key={index} 
+                               className={`badge badge-outline text-xs px-2 py-0.5 rounded-full border w-fit ${
+                                 item.orderType === 'Repeat'
+                                   ? 'bg-red-500/10 text-red-500 border-red-500'
+                                   : 'bg-green-500/10 text-green-500 border-green-500'
+                               }`}
+                             >
+                               {item.orderType || 'New'}
+                             </span>
+                           ))
+                        ) : '-'}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {quote.items && quote.items.length > 0 ? (
-                        <span className="text-sm">
-                          {quote.items.map(item => item.mrp ? `₹${item.mrp}` : '-').join(', ')}
-                        </span>
-                      ) : '-'}
+                      <div className="flex flex-col gap-1">
+                        {quote.items && quote.items.length > 0 ? (
+                          quote.items.map((item, index) => (
+                            <span key={index} className="text-sm">
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.quantity}
+                            </span>
+                          ))
+                        ) : '-'}
+                      </div>
                     </TableCell>
                     <TableCell>
-                      {quote.items && quote.items.length > 0 ? (
-                        <span className="text-sm">
-                          {quote.items.map(item => item.rate ? `₹${item.rate}` : '-').join(', ')}
-                        </span>
-                      ) : '-'}
+                      <div className="flex flex-col gap-1">
+                        {quote.items && quote.items.length > 0 ? (
+                          quote.items.map((item, index) => (
+                            <span key={index} className="text-sm">
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.mrp ? `₹${item.mrp}` : '-'}
+                            </span>
+                          ))
+                        ) : '-'}
+                      </div>
+                    </TableCell>
+                    <TableCell>
+                      <div className="flex flex-col gap-1">
+                        {quote.items && quote.items.length > 0 ? (
+                          quote.items.map((item, index) => (
+                            <span key={index} className="text-sm">
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.rate ? `₹${item.rate}` : '-'}
+                            </span>
+                          ))
+                        ) : '-'}
+                      </div>
                     </TableCell>
                     <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
                     <TableCell>{getStatusBadge(quote.status)}</TableCell>

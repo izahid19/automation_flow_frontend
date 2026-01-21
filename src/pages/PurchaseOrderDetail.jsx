@@ -17,18 +17,25 @@ import {
   FileText,
   Eye,
   EyeOff,
+  Check,
+  X,
+  Clock,
+  History,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PurchaseOrderPreview from '@/components/PurchaseOrderPreview';
 import { Label } from '@/components/ui/label';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 
 const PurchaseOrderDetail = () => {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [actionLoading, setActionLoading] = useState(false);
+  const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isAccountant } = useAuth();
 
   useEffect(() => {
     fetchOrder();
@@ -63,9 +70,24 @@ const PurchaseOrderDetail = () => {
       shipped: { label: 'Shipped', variant: 'default' },
       delivered: { label: 'Delivered', variant: 'default' },
       completed: { label: 'Completed', variant: 'default' },
+      po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
     };
     const s = statusMap[status] || { label: status, variant: 'secondary' };
-    return <Badge variant={s.variant}>{s.label}</Badge>;
+    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
+  };
+
+  const handleVerifyFullPayment = async () => {
+    setShowPaymentConfirm(false);
+    setActionLoading(true);
+    try {
+      await orderAPI.verifyFullPayment(id);
+      toast.success('Full payment verified. PO is now completed!');
+      fetchOrder();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to verify payment');
+    } finally {
+      setActionLoading(false);
+    }
   };
 
   const getQuoteStatusBadge = (status) => {
@@ -95,6 +117,7 @@ const PurchaseOrderDetail = () => {
   const quote = order.quote;
 
   return (
+  <>
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -145,282 +168,428 @@ const PurchaseOrderDetail = () => {
           }}
         />
       ) : (
-        <div className="space-y-6">
-          {/* Order Summary */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Package className="w-5 h-5" />
-            Order Summary
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">PO Number</p>
-              <p className="font-semibold text-primary">{order.poNumber}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
-              <p className="font-semibold">{order.quoteNumber || order.quote?.quoteNumber || 'N/A'}</p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Status</p>
-              {getStatusBadge(order.status)}
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Created Date</p>
-              <p className="font-medium">
-                {new Date(order.createdAt).toLocaleDateString('en-GB', {
-                  day: '2-digit',
-                  month: '2-digit',
-                  year: 'numeric',
-                })}
-              </p>
-            </div>
-            <div>
-              <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
-              <p className="font-semibold text-lg">₹{order.totalAmount?.toFixed(2) || '0.00'}</p>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          {/* Main Content - Left Side */}
+          <div className="lg:col-span-2 space-y-6">
+            {/* Order Summary */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Package className="w-5 h-5" />
+                  Order Summary
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">PO Number</p>
+                    <p className="font-semibold text-primary">{order.poNumber}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
+                    <p className="font-semibold">{order.quoteNumber || order.quote?.quoteNumber || 'N/A'}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Status</p>
+                    {getStatusBadge(order.status)}
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Created Date</p>
+                    <p className="font-medium">
+                      {new Date(order.createdAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric',
+                      })}
+                    </p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
+                    <p className="font-semibold text-lg">₹{order.totalAmount?.toFixed(2) || '0.00'}</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
 
-      {/* Manufacturer Details */}
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Building2 className="w-5 h-5" />
-            Manufacturer Details
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-2">
-            <p className="font-semibold text-lg">{order.manufacturer?.name}</p>
-            {order.manufacturer?.email && (
-              <p className="text-muted-foreground">
-                Email: {order.manufacturer.email}
-              </p>
+            {/* Manufacturer Details */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Building2 className="w-5 h-5" />
+                  Manufacturer Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-2">
+                  <p className="font-semibold text-lg">{order.manufacturer?.name}</p>
+                  {order.manufacturer?.email && (
+                    <p className="text-muted-foreground">
+                      Email: {order.manufacturer.email}
+                    </p>
+                  )}
+                  {order.manufacturer?.phone && (
+                    <p className="text-muted-foreground">
+                      Phone: {order.manufacturer.phone}
+                    </p>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Quote Details (When goes to Accountant/Designer) */}
+            {quote && (
+              <Card>
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2">
+                    <FileText className="w-5 h-5" />
+                    Quote Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-6">
+                  {/* Quote Summary */}
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 border-b">
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
+                      <p className="font-semibold text-primary">{quote.quoteNumber}</p>
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Quote Status</p>
+                      {getQuoteStatusBadge(quote.status)}
+                    </div>
+                    <div>
+                      <p className="text-sm text-muted-foreground mb-1">Client Name</p>
+                      <p className="font-semibold">{quote.clientName}</p>
+                    </div>
+                    {quote.clientEmail && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Client Email</p>
+                        <p className="font-medium">{quote.clientEmail}</p>
+                      </div>
+                    )}
+                    {quote.clientPhone && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Client Phone</p>
+                        <p className="font-medium">{quote.clientPhone}</p>
+                      </div>
+                    )}
+                    {quote.marketedBy && (
+                      <div>
+                        <p className="text-sm text-muted-foreground mb-1">Marketed By</p>
+                        <p className="font-medium">{quote.marketedBy}</p>
+                      </div>
+                    )}
+                  </div>
+                </CardContent>
+              </Card>
             )}
-            {order.manufacturer?.phone && (
-              <p className="text-muted-foreground">
-                Phone: {order.manufacturer.phone}
-              </p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
 
-      {/* Quote Details (When goes to Accountant/Designer) */}
-      {quote && (
-        <Card>
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <FileText className="w-5 h-5" />
-              Quote Details
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-6">
-            {/* Quote Summary */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 border-b">
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
-                <p className="font-semibold text-primary">{quote.quoteNumber}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Quote Status</p>
-                {getQuoteStatusBadge(quote.status)}
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground mb-1">Client Name</p>
-                <p className="font-semibold">{quote.clientName}</p>
-              </div>
-              {quote.clientEmail && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Client Email</p>
-                  <p className="font-medium">{quote.clientEmail}</p>
-                </div>
-              )}
-              {quote.clientPhone && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Client Phone</p>
-                  <p className="font-medium">{quote.clientPhone}</p>
-                </div>
-              )}
-              {quote.marketedBy && (
-                <div>
-                  <p className="text-sm text-muted-foreground mb-1">Marketed By</p>
-                  <p className="font-medium">{quote.marketedBy}</p>
-                </div>
-              )}
-            </div>
-
-
-
-
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Order Items */}
-      <Card>
-        <CardHeader>
-          <CardTitle>Purchase Order Items</CardTitle>
-        </CardHeader>
-        <CardContent className="space-y-4">
-          {order.items?.map((item, index) => {
-             const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
-             
-             // Helper to render read-only field
-             const ReadOnlyField = ({ label, value }) => (
-               <div className="space-y-1.5">
-                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                   {label}
-                 </Label>
-                 <div className="text-sm font-medium px-3 py-2 bg-muted/30 rounded-md border border-border/20 min-h-[38px] flex items-center">
-                   {value || '-'}
-                 </div>
-               </div>
-             );
-
-             return (
-               <Card key={index} className="relative border border-border/50 bg-card">
-                 <CardContent className="pt-6 space-y-6">
-                   {/* Item Header */}
-                   <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                     <div className="flex items-center gap-3">
-                       <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
-                         {index + 1}
-                       </span>
-                       <span className="font-semibold text-foreground">Product Details</span>
-                     </div>
-                   </div>
-
-                   <div className="space-y-6">
-                     {/* Product Specifications Section */}
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                       <ReadOnlyField label="Brand Name" value={item.brandName} />
-                       <ReadOnlyField label="Order Type" value={item.orderType} />
-                       <ReadOnlyField label="Category" value={item.categoryType} />
-                       <ReadOnlyField label="Formulation" value={item.formulationType} />
-
-                       {/* Colour of Soft Gelatin */}
-                       {item.formulationType === 'Soft Gelatine' && (
-                         <ReadOnlyField label="Colour of Soft Gelatin" value={item.softGelatinColor} />
-                       )}
-
-                       {/* Injection Type */}
-                       {item.formulationType === 'Injection' && (
-                         <ReadOnlyField label="Injection Type" value={item.injectionType} />
-                       )}
-
-                       {/* Dry Injection fields */}
-                       {item.formulationType === 'Injection' && item.injectionType === 'Dry Injection' && (
-                         <>
-                           <ReadOnlyField label="Unit Pack" value={item.dryInjectionUnitPack} />
-                           <ReadOnlyField label="Pack Type" value={item.dryInjectionPackType} />
-                           <ReadOnlyField label="Tray Pack" value={item.dryInjectionTrayPack} />
-                         </>
-                       )}
-                     </div>
-
-                     {/* Technical Specs Section */}
-                     <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                       {/* Composition - Spans 2 cols */}
-                       <div className="md:col-span-2">
-                          <ReadOnlyField label="Composition" value={item.composition} />
+            {/* Order Items */}
+            <Card>
+              <CardHeader>
+                <CardTitle>Purchase Order Items</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {order.items?.map((item, index) => {
+                   const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
+                   
+                   // Helper to render read-only field
+                   const ReadOnlyField = ({ label, value }) => (
+                     <div className="space-y-1.5">
+                       <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                         {label}
+                       </Label>
+                       <div className="text-sm font-medium px-3 py-2 bg-muted/30 rounded-md border border-border/20 min-h-[38px] flex items-center">
+                         {value || '-'}
                        </div>
+                     </div>
+                   );
 
-                       {/* Packing */}
-                       {showPackingField && (
-                         <ReadOnlyField 
-                           label={['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Unit Pack' : 'Box Packing'}
-                           value={item.packing === 'Custom' ? item.customPacking : item.packing}
-                         />
-                       )}
-
-                       {/* Packaging Type */}
-                       {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
-                         <div className={!showPackingField ? 'md:col-span-2' : ''}>
-                           <ReadOnlyField 
-                             label={['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'}
-                             value={item.packagingType === 'Custom' ? item.customPackagingType : item.packagingType}
-                           />
-                         </div>
-                       )}
-
-                       {/* PVC Type */}
-                       {item.packagingType === 'Blister' && (
-                         <div className="md:col-span-2">
-                           <ReadOnlyField 
-                             label="PVC Type"
-                             value={item.pvcType === 'Custom' ? item.customPvcType : item.pvcType}
-                           />
-                         </div>
-                       )}
-                       
-                       {/* Specification */}
-                       <div className="md:col-span-2">
-                          <ReadOnlyField label="Specification" value={item.specification} />
-                       </div>
-
-                       <ReadOnlyField label="Quantity" value={item.quantity} />
-                       
-                       {!order.hidePurchaseRate && (
-                         <>
-                         <ReadOnlyField label="Rate (₹)" value={item.rate} />
-                         <ReadOnlyField label="MRP per strip/unit (₹)" value={item.mrp} />
-                         
-                         <div className="space-y-1.5">
-                           <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
-                             Amount
-                           </Label>
-                           <div className="text-sm font-medium px-3 py-2 bg-muted/50 rounded-md border border-border/20 min-h-[38px] flex items-center text-primary">
-                             {`₹${((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)).toFixed(2)}`}
+                   return (
+                     <Card key={index} className="relative border border-border/50 bg-card">
+                       <CardContent className="pt-6 space-y-6">
+                         {/* Item Header */}
+                         <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                           <div className="flex items-center gap-3">
+                             <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                               {index + 1}
+                             </span>
+                             <span className="font-semibold text-foreground">Product Details</span>
                            </div>
                          </div>
-                         </>
-                       )}
-                     </div>
-                   </div>
-                 </CardContent>
-               </Card>
-             );
-          })}
 
-          {!order.hidePurchaseRate && (
-            <div className="mt-4 flex justify-end">
-              <div className="w-64 space-y-2">
-                <div className="flex justify-between">
-                  <span className="text-muted-foreground">Subtotal:</span>
-                  <span className="font-semibold">₹{order.subtotal?.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between pt-2 border-t">
-                  <span className="font-bold">Total:</span>
-                  <span className="font-bold text-lg text-primary">
-                    ₹{order.totalAmount?.toFixed(2)}
-                  </span>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
+                         <div className="space-y-6">
+                           {/* Product Specifications Section */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                             <ReadOnlyField label="Brand Name" value={item.brandName} />
+                             <ReadOnlyField label="Order Type" value={item.orderType} />
+                             <ReadOnlyField label="Category" value={item.categoryType} />
+                             <ReadOnlyField label="Formulation" value={item.formulationType} />
 
-      {/* Additional Notes */}
-      {order.notes && (
-        <Card>
-          <CardHeader>
-            <CardTitle>Notes</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <p className="text-sm whitespace-pre-wrap">{order.notes}</p>
-          </CardContent>
-        </Card>
-      )}
+                             {/* Colour of Soft Gelatin */}
+                             {item.formulationType === 'Soft Gelatine' && (
+                               <ReadOnlyField label="Colour of Soft Gelatin" value={item.softGelatinColor} />
+                             )}
+
+                             {/* Injection Type */}
+                             {item.formulationType === 'Injection' && (
+                               <ReadOnlyField label="Injection Type" value={item.injectionType} />
+                             )}
+
+                             {/* Dry Injection fields */}
+                             {item.formulationType === 'Injection' && item.injectionType === 'Dry Injection' && (
+                               <>
+                                 <ReadOnlyField label="Unit Pack" value={item.dryInjectionUnitPack} />
+                                 <ReadOnlyField label="Pack Type" value={item.dryInjectionPackType} />
+                                 <ReadOnlyField label="Tray Pack" value={item.dryInjectionTrayPack} />
+                               </>
+                             )}
+                           </div>
+
+                           {/* Technical Specs Section */}
+                           <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
+                             {/* Composition - Spans 2 cols */}
+                             <div className="md:col-span-2">
+                                <ReadOnlyField label="Composition" value={item.composition} />
+                             </div>
+
+                             {/* Packing */}
+                             {showPackingField && (
+                               <ReadOnlyField 
+                                 label={['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Unit Pack' : 'Box Packing'}
+                                 value={item.packing === 'Custom' ? item.customPacking : item.packing}
+                               />
+                             )}
+
+                             {/* Packaging Type */}
+                             {!(item.formulationType === 'Injection' && item.injectionType === 'Dry Injection') && (
+                               <div className={!showPackingField ? 'md:col-span-2' : ''}>
+                                 <ReadOnlyField 
+                                   label={['Syrup/Suspension', 'Dry Syrup'].includes(item.formulationType) ? 'Label Type' : 'Packaging Type'}
+                                   value={item.packagingType === 'Custom' ? item.customPackagingType : item.packagingType}
+                                 />
+                               </div>
+                             )}
+
+                             {/* PVC Type */}
+                             {item.packagingType === 'Blister' && (
+                               <div className="md:col-span-2">
+                                 <ReadOnlyField 
+                                   label="PVC Type"
+                                   value={item.pvcType === 'Custom' ? item.customPvcType : item.pvcType}
+                                 />
+                               </div>
+                             )}
+                             
+                             {/* Specification */}
+                             <div className="md:col-span-2">
+                                <ReadOnlyField label="Specification" value={item.specification} />
+                             </div>
+
+                             <ReadOnlyField label="Quantity" value={item.quantity} />
+                             
+                             {!order.hidePurchaseRate && (
+                               <>
+                               <ReadOnlyField label="Rate (₹)" value={item.rate} />
+                               <ReadOnlyField label="MRP per strip/unit (₹)" value={item.mrp} />
+                               
+                               <div className="space-y-1.5">
+                                 <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
+                                   Amount
+                                 </Label>
+                                 <div className="text-sm font-medium px-3 py-2 bg-muted/50 rounded-md border border-border/20 min-h-[38px] flex items-center text-primary">
+                                   {`₹${((parseFloat(item.quantity) || 0) * (parseFloat(item.rate) || 0)).toFixed(2)}`}
+                                 </div>
+                               </div>
+                               </>
+                             )}
+                           </div>
+                         </div>
+                       </CardContent>
+                     </Card>
+                   );
+                })}
+              </CardContent>
+            </Card>
+
+            {/* Additional Notes */}
+            {order.notes && (
+              <Card>
+                <CardHeader>
+                  <CardTitle>Notes</CardTitle>
+                </CardHeader>
+                <CardContent>
+                  <p className="text-sm whitespace-pre-wrap">{order.notes}</p>
+                </CardContent>
+              </Card>
+            )}
+          </div>
+
+          {/* Sidebar - Right Side */}
+          <div className="space-y-4">
+            {/* Payment Verification Action - For Admin/Accountant */}
+            {(isAdmin || isAccountant) && order.status !== 'po_completed' && (
+              <Card className="border-primary/30">
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-base">
+                    <Check className="w-5 h-5" />
+                    Verify Full Payment
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                  <p className="text-sm text-muted-foreground">
+                    Verify that full payment has been received for this Purchase Order to mark it as completed.
+                  </p>
+                  <Button
+                    onClick={() => setShowPaymentConfirm(true)}
+                    disabled={actionLoading}
+                    className="w-full gap-2 bg-green-600 hover:bg-green-700"
+                  >
+                    {actionLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check size={16} />}
+                    Confirm Full Payment Received
+                  </Button>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Payment Verified Info */}
+            {order.fullPaymentReceived && (
+              <Card className="border-green-500/30 bg-green-500/5">
+                <CardContent className="pt-4">
+                  <div className="flex items-center gap-2 text-green-600 font-semibold mb-2">
+                    <Check size={18} />
+                    Full Payment Verified
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Verified by: {order.fullPaymentVerifiedByName || 'Unknown'}
+                  </p>
+                  {order.fullPaymentReceivedAt && (
+                    <p className="text-xs text-muted-foreground">
+                      On: {new Date(order.fullPaymentReceivedAt).toLocaleDateString('en-GB', {
+                        day: '2-digit',
+                        month: '2-digit',
+                        year: 'numeric'
+                      })} at {new Date(order.fullPaymentReceivedAt).toLocaleTimeString('en-US', {
+                        hour: '2-digit',
+                        minute: '2-digit',
+                        hour12: true
+                      })}
+                    </p>
+                  )}
+                </CardContent>
+              </Card>
+            )}
+
+            {/* PO History */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <History className="w-5 h-5" />
+                  PO History
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(() => {
+                    // Build full history with PO Created always first
+                    const getStatusConfig = (status) => {
+                      const statusConfigs = {
+                        created: { color: 'bg-blue-500', icon: <Check size={16} className="text-white" />, label: 'PO Created' },
+                        draft: { color: 'bg-gray-500', icon: <Clock size={16} className="text-white" />, label: 'Draft' },
+                        sent: { color: 'bg-green-500', icon: <Check size={16} className="text-white" />, label: 'Sent to Manufacturer' },
+                        acknowledged: { color: 'bg-blue-500', icon: <Check size={16} className="text-white" />, label: 'Acknowledged' },
+                        in_production: { color: 'bg-amber-500', icon: <Clock size={16} className="text-white" />, label: 'In Production' },
+                        shipped: { color: 'bg-purple-500', icon: <Package size={16} className="text-white" />, label: 'Shipped' },
+                        delivered: { color: 'bg-green-500', icon: <Check size={16} className="text-white" />, label: 'Delivered' },
+                        completed: { color: 'bg-green-500', icon: <Check size={16} className="text-white" />, label: 'Completed' },
+                        po_completed: { color: 'bg-green-600', icon: <Check size={16} className="text-white" />, label: 'PO Completed' },
+                      };
+                      return statusConfigs[status] || { color: 'bg-gray-500', icon: <Clock size={16} className="text-white" />, label: status };
+                    };
+
+                    // Start with PO Created entry
+                    let fullHistory = [];
+                    
+                    // Check if statusHistory already has a 'created' entry
+                    const hasCreatedEntry = order.statusHistory?.some(h => h.status === 'created');
+                    
+                    if (!hasCreatedEntry) {
+                      // Add synthetic PO Created entry at the beginning
+                      fullHistory.push({
+                        status: 'created',
+                        changedByName: order.createdBy?.name || 'System',
+                        changedAt: order.createdAt,
+                        notes: 'Purchase Order created',
+                        isSynthetic: true,
+                      });
+                    }
+                    
+                    // Add actual status history entries
+                    if (order.statusHistory && order.statusHistory.length > 0) {
+                      fullHistory = [...fullHistory, ...order.statusHistory];
+                    }
+
+                    // Sort by date (oldest first)
+                    fullHistory.sort((a, b) => new Date(a.changedAt) - new Date(b.changedAt));
+
+                    return fullHistory.map((historyItem, index) => {
+                      const config = getStatusConfig(historyItem.status);
+                      const isLast = index === fullHistory.length - 1;
+
+                      return (
+                        <div key={index} className="flex gap-3">
+                          <div className="flex flex-col items-center">
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center ${config.color}`}>
+                              {config.icon}
+                            </div>
+                            {!isLast && <div className="w-0.5 h-full bg-border mt-2" />}
+                          </div>
+                          <div className="flex-1 pb-4">
+                            <p className="font-medium">{config.label}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {historyItem.changedByName || historyItem.changedBy?.name || 'System'}
+                            </p>
+                            {historyItem.changedAt && (
+                              <p className="text-xs text-muted-foreground mt-1">
+                                {new Date(historyItem.changedAt).toLocaleDateString('en-GB', {
+                                  day: '2-digit',
+                                  month: '2-digit',
+                                  year: 'numeric'
+                                })} at {new Date(historyItem.changedAt).toLocaleTimeString('en-US', {
+                                  hour: '2-digit',
+                                  minute: '2-digit',
+                                  hour12: true
+                                })}
+                              </p>
+                            )}
+                            {historyItem.notes && (
+                              <p className="text-xs text-muted-foreground mt-1 italic">
+                                {historyItem.notes}
+                              </p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    });
+                  })()}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
         </div>
       )}
     </div>
+
+    {/* Payment Verification Confirmation Modal */}
+    <ConfirmDialog
+      isOpen={showPaymentConfirm}
+      onClose={() => setShowPaymentConfirm(false)}
+      onConfirm={handleVerifyFullPayment}
+      title="Verify Full Payment"
+      message={`Are you sure you want to verify that full payment has been received for ${order?.poNumber}? This will mark the Purchase Order as completed.`}
+      confirmText="Verify Payment"
+      variant="default"
+    />
+  </>
   );
 };
 
