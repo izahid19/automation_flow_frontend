@@ -100,12 +100,14 @@ const OrderSheet = () => {
     if (status === 'pending_designer') {
       if (quote.designStatus === 'in_progress') {
         return <Badge variant="outline" className="bg-blue-500/10 text-blue-500 border-blue-500">Design In Progress</Badge>;
-      } else if (!quote.clientDesignApprovedAt) {
+      } else if (quote.designStatus === 'pending') {
+        return <Badge variant="outline" className="bg-orange-500/10 text-orange-500 border-orange-500">Pending Designer</Badge>;
+      } else if (quote.designStatus === 'completed' && !quote.clientDesignApprovedAt) {
         return <Badge variant="outline" className="bg-yellow-500/10 text-yellow-500 border-yellow-500">Pending Client Approval</Badge>;
       } else if (quote.clientDesignApprovedAt && !quote.manufacturerDesignApprovedAt) {
         return <Badge variant="outline" className="bg-purple-500/10 text-purple-500 border-purple-500">Pending Manufacturer Approval</Badge>;
       }
-      return <Badge variant="outline">Pending Designer</Badge>;
+      return <Badge variant="outline">Design Pending</Badge>;
     }
     
     const statusMap = {

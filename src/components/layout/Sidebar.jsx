@@ -33,7 +33,7 @@ const Sidebar = () => {
     { path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, roles: ['admin', 'sales_executive', 'manager', 'designer', 'accountant'] },
     { path: '/quotes', label: 'Quotes', icon: FileText, roles: ['admin', 'sales_executive', 'manager', 'designer', 'accountant'] },
     { path: '/order-sheet', label: 'Order Sheet', icon: Package, roles: ['admin', 'sales_executive', 'manager', 'accountant'] },
-    { path: '/purchase-orders', label: 'Purchase Orders', icon: Package, roles: ['admin', 'sales_executive', 'manager', 'accountant'] },
+    { path: '/purchase-orders', label: 'Purchase Orders', icon: Package, roles: ['admin', 'manager'] },
     { path: '/manufacturers', label: 'Add Manufacturers', icon: Factory, roles: ['admin', 'manager'] },
     { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
     { path: '/invoice-label', label: 'Invoice Label', icon: Tag, roles: ['admin'] },

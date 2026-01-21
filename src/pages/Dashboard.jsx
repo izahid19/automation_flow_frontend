@@ -19,7 +19,7 @@ import {
 import toast from 'react-hot-toast';
 
 const Dashboard = () => {
-  const { user, isAdmin } = useAuth();
+  const { user, isAdmin, isManager, isSalesExecutive } = useAuth();
   const [stats, setStats] = useState(null);
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -142,12 +142,14 @@ const Dashboard = () => {
               {exportLoading ? 'Exporting...' : 'Export Excel'}
             </Button>
           )}
-          <Button asChild>
-            <Link to="/quotes/new">
-              <Plus size={20} className="mr-2" />
-              New Quote
-            </Link>
-          </Button>
+          {(isAdmin || isManager || isSalesExecutive) && (
+            <Button asChild>
+              <Link to="/quotes/new">
+                <Plus size={20} className="mr-2" />
+                New Quote
+              </Link>
+            </Button>
+          )}
         </div>
       </div>
 
@@ -192,9 +194,11 @@ const Dashboard = () => {
             <div className="text-center py-8">
               <FileText className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground mb-4">No quotes yet</p>
-              <Button asChild>
-                <Link to="/quotes/new">Create Your First Quote</Link>
-              </Button>
+              {(isAdmin || isManager || isSalesExecutive) && (
+                <Button asChild>
+                  <Link to="/quotes/new">Create Your First Quote</Link>
+                </Button>
+              )}
             </div>
           ) : (
             <Table>

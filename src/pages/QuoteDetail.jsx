@@ -891,6 +891,12 @@ const QuoteDetail = () => {
                 <span>Total</span>
                 <span className="text-primary">₹{quote.totalAmount?.toFixed(2)}</span>
               </div>
+              {(isAccountant || isAdmin) && (
+                <div className="flex justify-between font-semibold text-amber-600">
+                  <span>Advance Amount (30%)</span>
+                  <span>₹{((quote.totalAmount || 0) * 0.30).toFixed(2)}</span>
+                </div>
+              )}
             </div>
           </div>
 

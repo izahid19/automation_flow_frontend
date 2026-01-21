@@ -123,15 +123,57 @@ function App() {
             <Route index element={<Navigate to="/dashboard" replace />} />
             <Route path="dashboard" element={<Dashboard />} />
             <Route path="quotes" element={<Quotes />} />
-            <Route path="quotes/new" element={<QuoteForm />} />
-            <Route path="quotes/:id/edit" element={<QuoteForm />} />
+            <Route 
+              path="quotes/new" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager', 'sales_executive']}>
+                  <QuoteForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="quotes/:id/edit" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager', 'sales_executive']}>
+                  <QuoteForm />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="quotes/:id" element={<QuoteDetail />} />
             <Route path="approvals" element={<Quotes />} />
             <Route path="order-sheet" element={<OrderSheet />} />
-            <Route path="purchase-orders" element={<CompletedOrders />} />
-            <Route path="purchase-orders/new" element={<PurchaseOrderForm />} />
-            <Route path="purchase-orders/:id/edit" element={<PurchaseOrderForm />} />
-            <Route path="purchase-orders/:id" element={<PurchaseOrderDetail />} />
+            <Route 
+              path="purchase-orders" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <CompletedOrders />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="purchase-orders/new" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <PurchaseOrderForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="purchase-orders/:id/edit" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <PurchaseOrderForm />
+                </ProtectedRoute>
+              } 
+            />
+            <Route 
+              path="purchase-orders/:id" 
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <PurchaseOrderDetail />
+                </ProtectedRoute>
+              } 
+            />
             <Route path="manufacturers" element={<Manufacturers />} />
             <Route
               path="users"

@@ -45,7 +45,7 @@ const Quotes = () => {
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const { isAdmin } = useAuth();
+  const { isAdmin, isManager, isSalesExecutive } = useAuth();
 
   // Calculate date ranges for filters
   const getDateRange = useCallback((filterType) => {
@@ -263,12 +263,14 @@ const Quotes = () => {
           <h1 className="text-2xl font-bold">Quotes</h1>
           <p className="text-muted-foreground">Manage all your quotations</p>
         </div>
-        <Button asChild>
-          <Link to="/quotes/new">
-            <Plus size={20} className="mr-2" />
-            New Quote
-          </Link>
-        </Button>
+        {(isAdmin || isManager || isSalesExecutive) && (
+          <Button asChild>
+            <Link to="/quotes/new">
+              <Plus size={20} className="mr-2" />
+              New Quote
+            </Link>
+          </Button>
+        )}
       </div>
 
       {/* Filters */}
@@ -480,14 +482,16 @@ const Quotes = () => {
                             <Edit size={16} />
                           </Button>
                         )}
-                        <Button
-                          variant="ghost"
-                          size="icon"
-                          onClick={() => navigate(`/quotes/new?repeat=${quote._id}`)}
-                          title="Repeat Order"
-                        >
-                          <Copy size={16} />
-                        </Button>
+                        {(isAdmin || isManager || isSalesExecutive) && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => navigate(`/quotes/new?repeat=${quote._id}`)}
+                            title="Repeat Order"
+                          >
+                            <Copy size={16} />
+                          </Button>
+                        )}
                         <Button
                           variant="ghost"
                           size="icon"
