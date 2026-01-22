@@ -7,9 +7,11 @@ import { useDebounce } from '@/hooks/useDebounce';
 import { invalidateCache } from '@/hooks/useApiCache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import {
   Tooltip,
   TooltipContent,
@@ -25,6 +27,8 @@ import {
   Plus,
   Check,
   CheckCircle,
+  Calendar,
+  X,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -37,6 +41,8 @@ const OrderSheet = () => {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
+  const [dateFilter, setDateFilter] = useState('all');
+  const [customDays, setCustomDays] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const navigate = useNavigate();
   const { isAdmin, isManager } = useAuth();
@@ -45,6 +51,86 @@ const OrderSheet = () => {
 
   // Debounce search to avoid excessive API calls
   const debouncedSearch = useDebounce(search, 400);
+
+  // Calculate date ranges for filters
+  const getDateRange = useCallback((filterType) => {
+    const today = new Date();
+    today.setHours(23, 59, 59, 999);
+    
+    switch (filterType) {
+      case 'last_day':
+        const yesterday = new Date(today);
+        yesterday.setDate(yesterday.getDate() - 1);
+        yesterday.setHours(0, 0, 0, 0);
+        const yesterdayEnd = new Date(yesterday);
+        yesterdayEnd.setHours(23, 59, 59, 999);
+        return { from: yesterday.toISOString().split('T')[0], to: yesterdayEnd.toISOString().split('T')[0] };
+      
+      case 'last_week':
+        const weekAgo = new Date(today);
+        weekAgo.setDate(weekAgo.getDate() - 7);
+        weekAgo.setHours(0, 0, 0, 0);
+        return { from: weekAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+      
+      case 'last_month':
+        const currentMonth = new Date(today);
+        currentMonth.setDate(1); // First day of current month
+        currentMonth.setHours(0, 0, 0, 0);
+        
+        const lastMonthStart = new Date(currentMonth);
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1); // First day of previous month
+        
+        const lastMonthEnd = new Date(currentMonth);
+        lastMonthEnd.setDate(0); // Last day of previous month (day 0 of current month)
+        lastMonthEnd.setHours(23, 59, 59, 999);
+        
+        return { 
+          from: lastMonthStart.toISOString().split('T')[0], 
+          to: lastMonthEnd.toISOString().split('T')[0] 
+        };
+      
+      case 'custom':
+        if (customDays && parseInt(customDays) > 0) {
+          const daysAgo = new Date(today);
+          daysAgo.setDate(daysAgo.getDate() - parseInt(customDays));
+          daysAgo.setHours(0, 0, 0, 0);
+          return { from: daysAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+        }
+        return null;
+      
+      default:
+        return null;
+    }
+  }, [customDays]);
+
+  const getDateFilterLabel = (filterType) => {
+    const today = new Date();
+    
+    switch (filterType) {
+      case 'last_day':
+        return 'Last Day';
+      
+      case 'last_week':
+        return 'Last 7 Days';
+      
+      case 'last_month':
+        const currentMonth = new Date(today);
+        currentMonth.setDate(1);
+        const lastMonthStart = new Date(currentMonth);
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+        const monthName = lastMonthStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        return monthName;
+      
+      case 'custom':
+        if (customDays && parseInt(customDays) > 0) {
+          return `Last ${customDays} Days`;
+        }
+        return 'Custom Days';
+      
+      default:
+        return 'All Dates';
+    }
+  };
 
   // Generate cache key for current query
   const getCacheKey = useCallback((params) => {
@@ -62,6 +148,15 @@ const OrderSheet = () => {
     if (debouncedSearch) params.search = debouncedSearch;
     if (statusFilter.length > 0 && !statusFilter.includes('all')) {
       params.status = statusFilter.join(',');
+    }
+    
+    // Add date filtering
+    if (dateFilter && dateFilter !== 'all') {
+      const dateRange = getDateRange(dateFilter);
+      if (dateRange && dateRange.from) {
+        params.dateFrom = dateRange.from;
+        params.dateTo = dateRange.to;
+      }
     }
 
     const cacheKey = getCacheKey(params);
@@ -97,7 +192,7 @@ const OrderSheet = () => {
     } finally {
       setLoading(false);
     }
-  }, [debouncedSearch, pagination.page, statusFilter, getCacheKey]);
+  }, [debouncedSearch, pagination.page, statusFilter, dateFilter, customDays, getDateRange, getCacheKey]);
 
   const toggleStatus = (value) => {
     setStatusFilter(prev => {
@@ -264,7 +359,61 @@ const OrderSheet = () => {
                 className="pl-10"
               />
             </div>
+              <Select value={dateFilter} onValueChange={setDateFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Dates" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Dates</SelectItem>
+                  <SelectItem value="last_day">Last Day</SelectItem>
+                  <SelectItem value="last_week">Last 7 Days</SelectItem>
+                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="custom">Custom Days</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
+            
+            {/* Custom Days Input */}
+            {dateFilter === 'custom' && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-sm">Last</Label>
+                <Input
+                  type="text"
+                  value={customDays}
+                  onChange={(e) => {
+                    // Only allow numbers
+                    const val = e.target.value.replace(/\D/g, '');
+                    setCustomDays(val);
+                  }}
+                  placeholder="e.g. 45"
+                  className="w-20"
+                />
+                <Label className="text-sm">Days</Label>
+              </div>
+            )}
+            
+            {/* Active Date Filter Chip */}
+            {dateFilter !== 'all' && (dateFilter !== 'custom' || (customDays && parseInt(customDays) > 0)) && (
+              <div className="flex items-center gap-2 my-3">
+                <Badge
+                  variant="outline"
+                  className="px-3 py-1.5 text-sm bg-green-500 text-white border-green-500 flex items-center gap-2"
+                >
+                  <Calendar className="w-3 h-3" />
+                  {getDateFilterLabel(dateFilter)}
+                  <button
+                    onClick={() => {
+                      setDateFilter('all');
+                      setCustomDays('');
+                    }}
+                    className="ml-1 bg-red-500 hover:bg-red-600 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </Badge>
+              </div>
+            )}
             
             {/* Status Filter Chips */}
             <div className="space-y-5 pt-2">
@@ -274,12 +423,12 @@ const OrderSheet = () => {
                   variant="outline"
                   className={`cursor-pointer px-4 py-1.5 text-sm transition-all inline-flex items-center ${
                     statusFilter.includes('all')
-                      ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
-                      : "text-muted-foreground hover:bg-muted/50"
+                      ? "bg-blue-400 text-white border-blue-400 hover:bg-blue-500" 
+                      : "text-white border-white/50 hover:bg-white/10"
                   }`}
                   onClick={() => toggleStatus('all')}
                 >
-                  {statusFilter.includes('all') && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
+                  {statusFilter.includes('all') && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
                   All Status
                 </Badge>
               </div>
@@ -302,12 +451,12 @@ const OrderSheet = () => {
                       variant="outline"
                       className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
                         statusFilter.includes(status.value)
-                          ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
+                          ? "bg-blue-400 text-white border-blue-400 hover:bg-blue-500" 
                           : "text-white border-white/50 hover:bg-white/10"
                       }`}
                       onClick={() => toggleStatus(status.value)}
                     >
-                      {statusFilter.includes(status.value) && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
+                      {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
                       {status.label}
                     </Badge>
                   ))}
@@ -328,12 +477,12 @@ const OrderSheet = () => {
                       variant="outline"
                       className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
                         statusFilter.includes(status.value)
-                          ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
+                          ? "bg-blue-400 text-white border-blue-400 hover:bg-blue-500" 
                           : "text-white border-white/50 hover:bg-white/10"
                       }`}
                       onClick={() => toggleStatus(status.value)}
                     >
-                      {statusFilter.includes(status.value) && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
+                      {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
                       {status.label}
                     </Badge>
                   ))}

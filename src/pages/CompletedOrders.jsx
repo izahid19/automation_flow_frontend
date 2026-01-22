@@ -15,6 +15,7 @@ import {
   Plus,
   Calendar,
   Check,
+  X,
 } from 'lucide-react';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
@@ -28,8 +29,7 @@ const CompletedOrders = () => {
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
-  const [customDateFrom, setCustomDateFrom] = useState('');
-  const [customDateTo, setCustomDateTo] = useState('');
+  const [customDays, setCustomDays] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
   const navigate = useNavigate();
   const { socket } = useSocket();
@@ -54,14 +54,14 @@ const CompletedOrders = () => {
       
       case 'last_month':
         const currentMonth = new Date(today);
-        currentMonth.setDate(1); // First day of current month
+        currentMonth.setDate(1);
         currentMonth.setHours(0, 0, 0, 0);
         
         const lastMonthStart = new Date(currentMonth);
-        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1); // First day of previous month
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
         
         const lastMonthEnd = new Date(currentMonth);
-        lastMonthEnd.setDate(0); // Last day of previous month (day 0 of current month)
+        lastMonthEnd.setDate(0);
         lastMonthEnd.setHours(23, 59, 59, 999);
         
         return { 
@@ -70,9 +70,11 @@ const CompletedOrders = () => {
         };
       
       case 'custom':
-        if (customDateFrom) {
-          const toDate = customDateTo || today.toISOString().split('T')[0];
-          return { from: customDateFrom, to: toDate };
+        if (customDays && parseInt(customDays) > 0) {
+          const daysAgo = new Date(today);
+          daysAgo.setDate(daysAgo.getDate() - parseInt(customDays));
+          daysAgo.setHours(0, 0, 0, 0);
+          return { from: daysAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
         }
         return null;
       
@@ -86,34 +88,24 @@ const CompletedOrders = () => {
     
     switch (filterType) {
       case 'last_day':
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        return `Last Day (${yesterday.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })})`;
+        return 'Last Day';
       
       case 'last_week':
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-        const weekAgoStr = weekAgo.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        const todayStr = today.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-        return `Last Week (${weekAgoStr} to ${todayStr})`;
+        return 'Last 7 Days';
       
       case 'last_month':
         const currentMonth = new Date(today);
-        currentMonth.setDate(1); // First day of current month
+        currentMonth.setDate(1);
         const lastMonthStart = new Date(currentMonth);
-        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1); // First day of previous month
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
         const monthName = lastMonthStart.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
-        return `Last Month (${monthName})`;
+        return monthName;
       
       case 'custom':
-        if (customDateFrom) {
-          const fromDate = new Date(customDateFrom);
-          const fromStr = fromDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          const toDate = customDateTo ? new Date(customDateTo) : today;
-          const toStr = toDate.toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' });
-          return `Custom (${fromStr} to ${toStr})`;
+        if (customDays && parseInt(customDays) > 0) {
+          return `Last ${customDays} Days`;
         }
-        return 'Custom Date';
+        return 'Custom Days';
       
       default:
         return 'All Dates';
@@ -156,7 +148,7 @@ const CompletedOrders = () => {
     } finally {
       setLoading(false);
     }
-  }, [search, pagination.page, dateFilter, statusFilter, customDateFrom, customDateTo]);
+  }, [search, pagination.page, dateFilter, statusFilter, customDays]);
 
   useEffect(() => {
     fetchOrders();
@@ -245,13 +237,54 @@ const CompletedOrders = () => {
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all">All Dates</SelectItem>
-                  <SelectItem value="last_day">{getDateFilterLabel('last_day')}</SelectItem>
-                  <SelectItem value="last_week">{getDateFilterLabel('last_week')}</SelectItem>
-                  <SelectItem value="last_month">{getDateFilterLabel('last_month')}</SelectItem>
-                  <SelectItem value="custom">{getDateFilterLabel('custom')}</SelectItem>
+                  <SelectItem value="last_day">Last Day</SelectItem>
+                  <SelectItem value="last_week">Last 7 Days</SelectItem>
+                  <SelectItem value="last_month">Last Month</SelectItem>
+                  <SelectItem value="custom">Custom Days</SelectItem>
                 </SelectContent>
               </Select>
             </div>
+            
+            {/* Custom Days Input */}
+            {dateFilter === 'custom' && (
+              <div className="flex items-center gap-2">
+                <Calendar className="w-4 h-4 text-muted-foreground" />
+                <Label className="text-sm">Last</Label>
+                <Input
+                  type="text"
+                  value={customDays}
+                  onChange={(e) => {
+                    const val = e.target.value.replace(/\D/g, '');
+                    setCustomDays(val);
+                  }}
+                  placeholder="e.g. 45"
+                  className="w-20"
+                />
+                <Label className="text-sm">Days</Label>
+              </div>
+            )}
+            
+            {/* Active Date Filter Chip */}
+            {dateFilter !== 'all' && (dateFilter !== 'custom' || (customDays && parseInt(customDays) > 0)) && (
+              <div className="flex items-center gap-2 my-3">
+                <Badge
+                  variant="outline"
+                  className="px-3 py-1.5 text-sm bg-green-500 text-white border-green-500 flex items-center gap-2"
+                >
+                  <Calendar className="w-3 h-3" />
+                  {getDateFilterLabel(dateFilter)}
+                  <button
+                    onClick={() => {
+                      setDateFilter('all');
+                      setCustomDays('');
+                    }}
+                    className="ml-1 bg-red-500 hover:bg-red-600 rounded-full p-0.5"
+                  >
+                    <X className="w-3 h-3 text-white" />
+                  </button>
+                </Badge>
+              </div>
+            )}
 
             {/* Status Filter Chips */}
             <div className="flex flex-wrap gap-2">
@@ -265,69 +298,16 @@ const CompletedOrders = () => {
                   variant="outline"
                   className={`cursor-pointer px-4 py-1.5 text-sm transition-all flex items-center ${
                     statusFilter === status.value
-                      ? "border-primary text-primary bg-transparent hover:bg-primary/10" 
+                      ? "bg-blue-400 text-white border-blue-400 hover:bg-blue-500" 
                       : "text-white border-white/50 hover:bg-white/10"
                   }`}
                   onClick={() => setStatusFilter(status.value)}
                 >
-                  {statusFilter === status.value && <Check className="w-3 h-3 mr-1 text-emerald-500" />}
+                  {statusFilter === status.value && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
                   {status.label}
                 </Badge>
               ))}
             </div>
-            {dateFilter === 'custom' && (
-              <div className="flex items-center gap-2 flex-wrap">
-                <Calendar className="w-4 h-4 text-muted-foreground mr-1" />
-                <Label className="text-sm font-medium">From:</Label>
-                <div className="relative group">
-                  <Input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    onFocus={(e) => (e.target.type = "date")}
-                    onBlur={(e) => (e.target.type = "text")}
-                    value={customDateFrom}
-                    onChange={(e) => {
-                      setCustomDateFrom(e.target.value);
-                      if (customDateTo && e.target.value > customDateTo) {
-                        setCustomDateTo('');
-                      }
-                    }}
-                    className="w-[140px] sm:w-[160px] uppercase text-transparent focus:text-foreground z-10 relative bg-transparent"
-                    max={customDateTo || new Date().toISOString().split('T')[0]}
-                  />
-                  {/* Overlay text for non-empty value when type is text to show formatted date */}
-                  {customDateFrom && (
-                     <div 
-                       className="absolute inset-0 flex items-center pl-3 text-sm pointer-events-none bg-background rounded-md border border-input text-foreground group-focus-within:hidden"
-                     >
-                       {new Date(customDateFrom).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                     </div>
-                  )}
-                </div>
-                
-                <Label className="text-sm font-medium">To:</Label>
-                <div className="relative group">
-                  <Input
-                    type="text"
-                    placeholder="dd/mm/yyyy"
-                    onFocus={(e) => (e.target.type = "date")}
-                    onBlur={(e) => (e.target.type = "text")}
-                    value={customDateTo}
-                    onChange={(e) => setCustomDateTo(e.target.value)}
-                    className="w-[140px] sm:w-[160px] uppercase text-transparent focus:text-foreground z-10 relative bg-transparent"
-                    min={customDateFrom}
-                    max={new Date().toISOString().split('T')[0]}
-                  />
-                   {customDateTo && (
-                     <div 
-                       className="absolute inset-0 flex items-center pl-3 text-sm pointer-events-none bg-background rounded-md border border-input text-foreground group-focus-within:hidden"
-                     >
-                        {new Date(customDateTo).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })}
-                     </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
         </CardContent>
       </Card>
