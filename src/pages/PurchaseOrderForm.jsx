@@ -11,6 +11,7 @@ import toast from 'react-hot-toast';
 import axios from 'axios';
 import { useAuth } from '@/context/AuthContext';
 import { API_URL } from '@/config';
+import { orderAPI } from '@/services/api';
 import PurchaseOrderPreview from '@/components/PurchaseOrderPreview';
 import { 
   PACKING_OPTIONS, 
@@ -20,6 +21,7 @@ import {
 } from '@/constants/formulation.constants';
 import { DEFAULT_ITEM } from '@/constants/quote.constants';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const PurchaseOrderForm = () => {
   const navigate = useNavigate();
@@ -29,6 +31,9 @@ const PurchaseOrderForm = () => {
   const [manufacturers, setManufacturers] = useState([]);
   const [loadingQuote, setLoadingQuote] = useState(false);
   const [showPreview, setShowPreview] = useState(false);
+  const [pendingSheetItems, setPendingSheetItems] = useState([]);
+  const [showAddItemModal, setShowAddItemModal] = useState(false);
+  const [selectedPendingIds, setSelectedPendingIds] = useState([]);
   
   // Get quoteId from URL query params
   const searchParams = new URLSearchParams(window.location.search);
@@ -52,6 +57,51 @@ const PurchaseOrderForm = () => {
     }
   }, [quoteId]);
 
+  const mapSheetItemToFormItem = (sheetItem) => {
+    const quoteItem = sheetItem?.quote?.items?.[sheetItem.itemIndex] || {};
+    const sheetItemDetails = sheetItem?.item || sheetItem?.itemDetails || {};
+    const sourceItem = {
+      ...quoteItem,
+      ...sheetItemDetails,
+    };
+    return {
+      ...DEFAULT_ITEM,
+      ...sourceItem,
+      quantity: sourceItem.quantity?.toString() || '',
+      rate: sourceItem.rate?.toString() || '',
+      mrp: sourceItem.mrp?.toString() || '',
+      selected: true,
+      originalIndex: sheetItem?.itemIndex,
+      sourceSheetId: sheetItem?._id,
+      sourceQuoteId: sheetItem?.quote?._id,
+    };
+  };
+
+  const fetchPendingOrderSheetItems = async ({
+    quoteId: sheetQuoteId,
+    targetIndex,
+    includeAll = false,
+  } = {}) => {
+    try {
+      const response = await orderAPI.getSheet({
+        status: 'all',
+        limit: 500,
+        ...(sheetQuoteId && !includeAll ? { quoteId: sheetQuoteId } : {}),
+      });
+      const rows = response.data.data || [];
+      const filtered = rows.filter((row) => {
+        const matchesTargetIndex =
+          Number.isInteger(targetIndex) ? row.itemIndex === targetIndex : true;
+        return matchesTargetIndex && !row.purchaseOrder;
+      });
+      setPendingSheetItems(filtered);
+      return filtered;
+    } catch (error) {
+      toast.error('Failed to load pending order sheet items');
+      return [];
+    }
+  };
+
   const loadQuoteData = async (id) => {
     setLoadingQuote(true);
     try {
@@ -68,13 +118,20 @@ const PurchaseOrderForm = () => {
         quoteNumber: quote.quoteNumber,
       }));
       
-      // Pre-populate items from quote
-      // Pre-populate items from quote
-      if (quote.items && quote.items.length > 0) {
+      const parsedTargetIndex = targetItemIndex !== null ? parseInt(targetItemIndex, 10) : null;
+
+      // Pre-populate items from order sheet (preferred), fallback to quote items
+      const pendingItems = await fetchPendingOrderSheetItems({
+        quoteId: quote._id,
+        targetIndex: Number.isInteger(parsedTargetIndex) ? parsedTargetIndex : null,
+      });
+
+      if (pendingItems.length > 0) {
+        setItems(pendingItems.map(mapSheetItemToFormItem));
+      } else if (quote.items && quote.items.length > 0) {
         const taggedItems = quote.items.map((item, i) => ({ ...item, _originalIndex: i }));
-        
-        const itemsToLoad = targetItemIndex !== null 
-          ? taggedItems.filter(item => item._originalIndex === parseInt(targetItemIndex))
+        const itemsToLoad = Number.isInteger(parsedTargetIndex)
+          ? taggedItems.filter((item) => item._originalIndex === parsedTargetIndex)
           : taggedItems;
 
         setItems(itemsToLoad.map((item) => ({
@@ -85,6 +142,7 @@ const PurchaseOrderForm = () => {
           mrp: item.mrp?.toString() || '',
           selected: true,
           originalIndex: item._originalIndex,
+          sourceQuoteId: quote._id,
         })));
       }
       
@@ -179,9 +237,54 @@ const PurchaseOrderForm = () => {
   const removeItem = (index) => {
     if (items.length > 1) {
       setItems(items.filter((_, i) => i !== index));
-    } else {
-      toast.error('At least one item is required');
+      return;
     }
+
+    // Keep one blank item so the form stays usable.
+    setItems([{ ...DEFAULT_ITEM, selected: true }]);
+  };
+
+  const availablePendingItems = pendingSheetItems.filter((sheetItem) => {
+    return !items.some((item) => {
+      if (item.sourceSheetId && sheetItem?._id) {
+        return item.sourceSheetId === sheetItem._id;
+      }
+      if (item.sourceQuoteId && sheetItem?.quote?._id) {
+        return (
+          String(item.sourceQuoteId) === String(sheetItem.quote._id) &&
+          item.originalIndex === sheetItem.itemIndex
+        );
+      }
+      return item.originalIndex === sheetItem.itemIndex;
+    });
+  });
+
+  const togglePendingSelection = (id) => {
+    setSelectedPendingIds((prev) => {
+      if (prev.includes(id)) {
+        return prev.filter((value) => value !== id);
+      }
+      return [...prev, id];
+    });
+  };
+
+  const handleAddPendingItems = () => {
+    if (selectedPendingIds.length === 0) {
+      toast.error('Please select at least one item');
+      return;
+    }
+
+    const itemsToAdd = availablePendingItems.filter((item) => selectedPendingIds.includes(item._id));
+    if (itemsToAdd.length === 0) {
+      toast.error('Selected items are not available');
+      return;
+    }
+
+    const mappedItems = itemsToAdd.map((selectedItem) => mapSheetItemToFormItem(selectedItem));
+
+    setItems((prev) => [...prev, ...mappedItems]);
+    setSelectedPendingIds([]);
+    setShowAddItemModal(false);
   };
 
   const calculateTotals = () => {
@@ -392,12 +495,12 @@ const PurchaseOrderForm = () => {
 
           {/* PO Items */}
           <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
+            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <CardTitle>Purchase Order Items</CardTitle>
             </CardHeader>
             <CardContent className="space-y-4">
               {items.map((item, index) => {
-                const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
+                const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap', 'Custom'].includes(item.formulationType);
                 
                 // Helper to render read-only field
                 const ReadOnlyField = ({ label, value }) => (
@@ -416,6 +519,7 @@ const PurchaseOrderForm = () => {
                     <CardContent className="pt-6 space-y-6">
                       {/* Item Header */}
                       <div className="flex items-center justify-between border-b border-border/40 pb-3">
+                      <div className="flex items-center justify-between">
                         <div className="flex items-center gap-3">
                           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
                             {index + 1}
@@ -424,6 +528,18 @@ const PurchaseOrderForm = () => {
                             Product Details
                           </span>
                         </div>
+                        {index !== 0 && (
+                          <Button
+                            type="button"
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => removeItem(index)}
+                            className="text-destructive hover:text-destructive"
+                          >
+                            <Trash2 size={16} />
+                          </Button>
+                        )}
+                      </div>
                       </div>
 
                       <div className="space-y-6">
@@ -432,7 +548,14 @@ const PurchaseOrderForm = () => {
                           <ReadOnlyField label="Brand Name" value={item.brandName} />
                           <ReadOnlyField label="Order Type" value={item.orderType} />
                           <ReadOnlyField label="Category" value={item.categoryType} />
-                          <ReadOnlyField label="Formulation" value={item.formulationType} />
+                          <ReadOnlyField
+                            label="Formulation"
+                            value={
+                              item.formulationType === 'Custom'
+                                ? (item.customFormulationType || 'Custom')
+                                : item.formulationType
+                            }
+                          />
 
                           {/* Colour of Soft Gelatin */}
                           {item.formulationType === 'Soft Gelatine' && (
@@ -538,6 +661,26 @@ const PurchaseOrderForm = () => {
                   </Card>
                 );
               })}
+
+              {quoteId && (
+                <div className="flex justify-end pt-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => {
+                      fetchPendingOrderSheetItems({
+                        includeAll: true,
+                      });
+                      setShowAddItemModal(true);
+                    }}
+                    className="gap-2"
+                  >
+                    <Plus size={14} />
+                    Add another order item
+                  </Button>
+                </div>
+              )}
             </CardContent>
           </Card>
         </div>
@@ -584,6 +727,56 @@ const PurchaseOrderForm = () => {
         </div>
       </div>
       )}
+
+      <Dialog open={showAddItemModal} onOpenChange={setShowAddItemModal}>
+        <DialogContent className="max-w-3xl">
+          <DialogHeader>
+            <DialogTitle>Add pending items</DialogTitle>
+            <DialogDescription>
+              Select pending order sheet items to include in this purchase order.
+            </DialogDescription>
+          </DialogHeader>
+
+          <div className="max-h-[420px] overflow-y-auto space-y-3">
+            {availablePendingItems.length === 0 ? (
+              <div className="text-sm text-muted-foreground">
+                No pending items available for this quote.
+              </div>
+            ) : (
+              availablePendingItems.map((sheetItem) => (
+                <div
+                  key={sheetItem._id}
+                  className="flex items-center gap-3 rounded-md border border-border/40 p-3"
+                >
+                  <input
+                    type="checkbox"
+                    checked={selectedPendingIds.includes(sheetItem._id)}
+                    onChange={() => togglePendingSelection(sheetItem._id)}
+                    className="h-4 w-4"
+                  />
+                  <div className="flex-1">
+                    <div className="font-medium">
+                      {sheetItem.item?.brandName || sheetItem.item?.name || 'Item'} (#{sheetItem.itemIndex + 1})
+                    </div>
+                    <div className="text-xs text-muted-foreground">
+                      Qty: {sheetItem.item?.quantity || '-'} • Rate: {sheetItem.item?.rate || '-'} • Order Type: {sheetItem.item?.orderType || 'New'}
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
+
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowAddItemModal(false)}>
+              Cancel
+            </Button>
+            <Button onClick={handleAddPendingItems} disabled={selectedPendingIds.length === 0}>
+              Add selected items
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };

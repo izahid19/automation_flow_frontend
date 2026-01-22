@@ -16,7 +16,9 @@ import QuoteDetail from './pages/QuoteDetail';
 import Manufacturers from './pages/Manufacturers';
 import Users from './pages/Users';
 import InvoiceLabel from './pages/InvoiceLabel';
+import PurchaseOrderLabel from './pages/PurchaseOrderLabel';
 import QuoteMailSettings from './pages/QuoteMailSettings';
+import PurchaseOrderMailSettings from './pages/PurchaseOrderMailSettings';
 import CompletedOrders from './pages/CompletedOrders';
 import OrderSheet from './pages/OrderSheet';
 import PurchaseOrderDetail from './pages/PurchaseOrderDetail';
@@ -192,10 +194,26 @@ function App() {
               }
             />
             <Route
+              path="purchase-order-label"
+              element={
+                <ProtectedRoute allowedRoles={['admin']}>
+                  <PurchaseOrderLabel />
+                </ProtectedRoute>
+              }
+            />
+            <Route
               path="quote-mail-settings"
               element={
                 <ProtectedRoute allowedRoles={['admin', 'manager']}>
                   <QuoteMailSettings />
+                </ProtectedRoute>
+              }
+            />
+            <Route
+              path="po-mail-settings"
+              element={
+                <ProtectedRoute allowedRoles={['admin', 'manager']}>
+                  <PurchaseOrderMailSettings />
                 </ProtectedRoute>
               }
             />

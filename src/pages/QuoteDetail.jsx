@@ -1,6 +1,7 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { useSocket } from '../context/SocketContext';
 import { quoteAPI, settingsAPI } from '../services/api';
 import { 
   ArrowLeft, 
@@ -32,6 +33,7 @@ const QuoteDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin, isSalesExecutive, isManager, isMD, isDesigner, isAccountant } = useAuth();
+  const { socket } = useSocket();
   const [quote, setQuote] = useState(null);
   const [loading, setLoading] = useState(true);
   const hasSoftGelatin = quote?.items?.some(item => item.formulationType === 'Soft Gelatine');
@@ -60,12 +62,7 @@ const QuoteDetail = () => {
     }
   }, [quote]);
 
-  useEffect(() => {
-    fetchQuote();
-    fetchCompanySettings();
-  }, [id]);
-
-  const fetchCompanySettings = async () => {
+  const fetchCompanySettings = useCallback(async () => {
     try {
       const response = await settingsAPI.getAll();
       if (response.data.success) {
@@ -78,9 +75,9 @@ const QuoteDetail = () => {
     } catch (error) {
       console.error('Failed to fetch company settings:', error);
     }
-  };
+  }, []);
 
-  const fetchQuote = async () => {
+  const fetchQuote = useCallback(async () => {
     try {
       const response = await quoteAPI.getOne(id);
       setQuote(response.data.data);
@@ -90,7 +87,44 @@ const QuoteDetail = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchQuote();
+    fetchCompanySettings();
+  }, [fetchQuote, fetchCompanySettings]);
+
+  // Listen for real-time updates to this quote
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handleQuoteUpdate = (data) => {
+      // Only refresh if the update is for this quote
+      if (data.quote?._id === id || data.quote?.id === id) {
+        fetchQuote();
+      }
+    };
+
+    socket.on('quote:approved', handleQuoteUpdate);
+    socket.on('quote:rejected', handleQuoteUpdate);
+    socket.on('quote:design-updated', handleQuoteUpdate);
+    socket.on('quote:client-approved', handleQuoteUpdate);
+    socket.on('quote:client-order-updated', handleQuoteUpdate);
+    socket.on('quote:advance-payment-received', handleQuoteUpdate);
+    socket.on('quote:completed', handleQuoteUpdate);
+    socket.on('quote:client-design-approved', handleQuoteUpdate);
+
+    return () => {
+      socket.off('quote:approved', handleQuoteUpdate);
+      socket.off('quote:rejected', handleQuoteUpdate);
+      socket.off('quote:design-updated', handleQuoteUpdate);
+      socket.off('quote:client-approved', handleQuoteUpdate);
+      socket.off('quote:client-order-updated', handleQuoteUpdate);
+      socket.off('quote:advance-payment-received', handleQuoteUpdate);
+      socket.off('quote:completed', handleQuoteUpdate);
+      socket.off('quote:client-design-approved', handleQuoteUpdate);
+    };
+  }, [socket, id, fetchQuote]);
 
   const handleSubmit = async () => {
     setActionLoading(true);
@@ -194,6 +228,24 @@ const QuoteDetail = () => {
       fetchQuote();
     } catch (error) {
       toast.error('Failed to approve');
+    } finally {
+      setActionLoading(false);
+    }
+  };
+
+  const handleRejectManager = async () => {
+    if (!comments) {
+      toast.error('Please provide a reason for rejection');
+      return;
+    }
+    setActionLoading(true);
+    try {
+      await quoteAPI.rejectManager(id, { comments });
+      toast.success('Quote rejected by Manager');
+      setComments('');
+      fetchQuote();
+    } catch (error) {
+      toast.error('Failed to reject');
     } finally {
       setActionLoading(false);
     }
@@ -633,7 +685,7 @@ const QuoteDetail = () => {
                     Approve
                   </button>
                   <button
-                    onClick={handleRejectMD}
+                    onClick={handleRejectManager}
                     disabled={actionLoading}
                     className="btn btn-danger flex-1"
                   >

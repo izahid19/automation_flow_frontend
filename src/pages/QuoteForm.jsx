@@ -70,6 +70,7 @@ const QuoteForm = () => {
   const [loading, setLoading] = useState(false);
   const [loadingQuote, setLoadingQuote] = useState(isEditMode || isRepeatMode);
   const [errors, setErrors] = useState({});
+  const [itemErrors, setItemErrors] = useState([]);
   const [showPreview, setShowPreview] = useState(false);
   const [formData, setFormData] = useState({
     partyName: '',
@@ -234,35 +235,42 @@ const QuoteForm = () => {
       newErrors.clientPhone = 'Please enter a valid phone number';
     }
 
-    const itemValidation = formData.items.some((item) => {
-      const isPharma = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
+    const nextItemErrors = formData.items.map((item) => {
+      const isPharma = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap', 'Custom'].includes(item.formulationType);
       const isSoftGelatin = item.formulationType === 'Soft Gelatine';
       const isLiquidInjection = item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection';
       const isDryInjection = item.formulationType === 'Injection' && item.injectionType === 'Dry Injection';
       const isDrySyrup = item.formulationType === 'Dry Syrup';
-      return (
-        !item.brandName ||
-        !item.composition ||
-        !item.quantity ||
-        !item.rate ||
-        !item.mrp ||
-        !item.packagingType ||
-        (isPharma && !item.packing) ||
-        (isSoftGelatin && !item.softGelatinColor?.trim()) ||
-        (isLiquidInjection && !item.injectionBoxPacking?.trim()) ||
-        (isLiquidInjection && !item.injectionPacking) ||
-        (isDryInjection && !item.dryInjectionUnitPack?.trim()) ||
-        (isDryInjection && !item.dryInjectionPackType) ||
-        (isDryInjection && !item.dryInjectionTrayPack) ||
-        (isDrySyrup && !item.cartonPacking) ||
-        (isDrySyrup && !item.drySyrupWaterType)
-      );
+      const isCustomFormulation = item.formulationType === 'Custom';
+
+      const fieldErrors = {};
+      if (!item.brandName?.trim()) fieldErrors.brandName = 'Brand name is required';
+      if (!item.composition?.trim()) fieldErrors.composition = 'Composition is required';
+      if (!item.quantity) fieldErrors.quantity = 'Quantity is required';
+      if (!item.rate) fieldErrors.rate = 'Rate is required';
+      if (!item.mrp) fieldErrors.mrp = 'MRP is required';
+      if (!item.packagingType) fieldErrors.packagingType = 'Packaging type is required';
+      if (isCustomFormulation && !item.customFormulationType?.trim()) {
+        fieldErrors.customFormulationType = 'Custom formulation is required';
+      }
+      if (isPharma && !item.packing) fieldErrors.packing = 'Packing is required';
+      if (isSoftGelatin && !item.softGelatinColor?.trim()) fieldErrors.softGelatinColor = 'Colour is required';
+      if (isLiquidInjection && !item.injectionBoxPacking?.trim()) fieldErrors.injectionBoxPacking = 'Box packing is required';
+      if (isLiquidInjection && !item.injectionPacking) fieldErrors.injectionPacking = 'Injection packing is required';
+      if (isDryInjection && !item.dryInjectionUnitPack?.trim()) fieldErrors.dryInjectionUnitPack = 'Unit pack is required';
+      if (isDryInjection && !item.dryInjectionPackType) fieldErrors.dryInjectionPackType = 'Pack type is required';
+      if (isDryInjection && !item.dryInjectionTrayPack) fieldErrors.dryInjectionTrayPack = 'Tray pack is required';
+      if (isDrySyrup && !item.cartonPacking) fieldErrors.cartonPacking = 'Carton is required';
+      if (isDrySyrup && !item.drySyrupWaterType) fieldErrors.drySyrupWaterType = 'Water type is required';
+
+      return fieldErrors;
     });
 
-    if (itemValidation) {
+    if (nextItemErrors.some((errs) => Object.keys(errs).length > 0)) {
       newErrors.items = 'Please fill in all mandatory item fields (Brand, Composition, Packing, etc.)';
     }
 
+    setItemErrors(nextItemErrors);
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -315,6 +323,7 @@ const QuoteForm = () => {
       newItems[index].dryInjectionUnitPack = '';
       newItems[index].dryInjectionPackType = '';
       newItems[index].dryInjectionTrayPack = '';
+      newItems[index].customFormulationType = '';
     }
     
     // Reset injection fields if injection type changes
@@ -342,7 +351,22 @@ const QuoteForm = () => {
     }
 
     setFormData({ ...formData, items: newItems });
+
+    setItemErrors((prev) => {
+      if (!prev?.length) return prev;
+      const next = [...prev];
+      if (field === 'formulationType') {
+        next[index] = {};
+        return next;
+      }
+      if (!next[index] || !next[index][field]) return prev;
+      const { [field]: _, ...rest } = next[index];
+      next[index] = rest;
+      return next;
+    });
   };
+
+  const getItemError = (index, field) => itemErrors[index]?.[field];
 
   const addItem = () => {
     setFormData({
@@ -563,7 +587,7 @@ const QuoteForm = () => {
             </CardHeader>
             <CardContent className="space-y-4">
               {formData.items.map((item, index) => {
-                const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
+                const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap', 'Custom'].includes(item.formulationType);
                 const packingOptions = PACKING_OPTIONS[item.formulationType] || [];
                 const packagingOptions = PACKAGING_OPTIONS[item.formulationType];
 
@@ -614,8 +638,11 @@ const QuoteForm = () => {
                             value={item.brandName}
                             onChange={(e) => handleItemChange(index, 'brandName', e.target.value)}
                             placeholder="Enter Brand Name"
-                            className="h-10"
+                            className={`h-10 ${getItemError(index, 'brandName') ? 'border-destructive' : ''}`}
                           />
+                          {getItemError(index, 'brandName') && (
+                            <p className="text-xs text-destructive">{getItemError(index, 'brandName')}</p>
+                          )}
                         </div>
 
                         {/* Order Type */}
@@ -676,6 +703,19 @@ const QuoteForm = () => {
                               ))}
                             </SelectContent>
                           </Select>
+                          {item.formulationType === 'Custom' && (
+                            <>
+                              <Input
+                                value={item.customFormulationType || ''}
+                                onChange={(e) => handleItemChange(index, 'customFormulationType', e.target.value)}
+                                placeholder="Enter custom formulation"
+                                className={`h-10 mt-2 ${getItemError(index, 'customFormulationType') ? 'border-destructive' : ''}`}
+                              />
+                              {getItemError(index, 'customFormulationType') && (
+                                <p className="text-xs text-destructive">{getItemError(index, 'customFormulationType')}</p>
+                              )}
+                            </>
+                          )}
                         </div>
 
                         {/* Colour of Soft Gelatin - Only for Soft Gelatine formulation */}
@@ -684,12 +724,15 @@ const QuoteForm = () => {
                             <Label className="text-xs font-medium text-white uppercase tracking-wider">
                               Colour of Soft Gelatin <span className="text-red-500">*</span>
                             </Label>
-                            <Input
+                          <Input
                               value={item.softGelatinColor || ''}
                               onChange={(e) => handleItemChange(index, 'softGelatinColor', e.target.value)}
                               placeholder="Enter colour"
-                              className="h-10"
+                              className={`h-10 ${getItemError(index, 'softGelatinColor') ? 'border-destructive' : ''}`}
                             />
+                            {getItemError(index, 'softGelatinColor') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'softGelatinColor')}</p>
+                            )}
                           </div>
                         )}
 
@@ -724,8 +767,11 @@ const QuoteForm = () => {
                               value={item.dryInjectionUnitPack || ''}
                               onChange={(e) => handleItemChange(index, 'dryInjectionUnitPack', e.target.value)}
                               placeholder="Enter unit pack"
-                              className="h-10"
+                              className={`h-10 ${getItemError(index, 'dryInjectionUnitPack') ? 'border-destructive' : ''}`}
                             />
+                            {getItemError(index, 'dryInjectionUnitPack') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'dryInjectionUnitPack')}</p>
+                            )}
                           </div>
                         )}
 
@@ -739,7 +785,7 @@ const QuoteForm = () => {
                               value={item.dryInjectionPackType || ''}
                               onValueChange={(value) => handleItemChange(index, 'dryInjectionPackType', value)}
                             >
-                              <SelectTrigger className="w-full h-10">
+                            <SelectTrigger className={`w-full h-10 ${getItemError(index, 'dryInjectionPackType') ? 'border-destructive' : ''}`}>
                                 <SelectValue placeholder="Select Pack Type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -747,6 +793,9 @@ const QuoteForm = () => {
                                 <SelectItem value="Without Water">Without Water</SelectItem>
                               </SelectContent>
                             </Select>
+                            {getItemError(index, 'dryInjectionPackType') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'dryInjectionPackType')}</p>
+                            )}
                           </div>
                         )}
 
@@ -760,7 +809,7 @@ const QuoteForm = () => {
                               value={item.dryInjectionTrayPack || ''}
                               onValueChange={(value) => handleItemChange(index, 'dryInjectionTrayPack', value)}
                             >
-                              <SelectTrigger className="w-full h-10">
+                            <SelectTrigger className={`w-full h-10 ${getItemError(index, 'dryInjectionTrayPack') ? 'border-destructive' : ''}`}>
                                 <SelectValue placeholder="Select Tray Pack" />
                               </SelectTrigger>
                               <SelectContent>
@@ -768,6 +817,9 @@ const QuoteForm = () => {
                                 <SelectItem value="Not Required">Not Required</SelectItem>
                               </SelectContent>
                             </Select>
+                            {getItemError(index, 'dryInjectionTrayPack') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'dryInjectionTrayPack')}</p>
+                            )}
                           </div>
                         )}
                       </div>
@@ -783,8 +835,11 @@ const QuoteForm = () => {
                               value={item.composition}
                               onChange={(e) => handleItemChange(index, 'composition', e.target.value)}
                               placeholder="Enter product composition"
-                              className="h-10"
+                              className={`h-10 ${getItemError(index, 'composition') ? 'border-destructive' : ''}`}
                           />
+                          {getItemError(index, 'composition') && (
+                            <p className="text-xs text-destructive">{getItemError(index, 'composition')}</p>
+                          )}
                         </div>
 
                         {/* Packing (Box / Unit) - Conditional */}
@@ -797,7 +852,7 @@ const QuoteForm = () => {
                                 value={item.packing}
                                 onValueChange={(value) => handleItemChange(index, 'packing', value)}
                             >
-                                <SelectTrigger className="w-full h-10">
+                                <SelectTrigger className={`w-full h-10 ${getItemError(index, 'packing') ? 'border-destructive' : ''}`}>
                                     <SelectValue placeholder="Select" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -814,6 +869,9 @@ const QuoteForm = () => {
                                 className="h-10 mt-2"
                               />
                             )}
+                            {getItemError(index, 'packing') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'packing')}</p>
+                            )}
                           </div>
                         )}
 
@@ -828,7 +886,7 @@ const QuoteForm = () => {
                                     value={item.packagingType}
                                     onValueChange={(value) => handleItemChange(index, 'packagingType', value)}
                                 >
-                                    <SelectTrigger className="w-full h-10">
+                                    <SelectTrigger className={`w-full h-10 ${getItemError(index, 'packagingType') ? 'border-destructive' : ''}`}>
                                         <SelectValue placeholder="Select Type" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -842,7 +900,7 @@ const QuoteForm = () => {
                                     value={item.packagingType}
                                     onChange={(e) => handleItemChange(index, 'packagingType', e.target.value)}
                                     placeholder="Type"
-                                    className="h-10"
+                                    className={`h-10 ${getItemError(index, 'packagingType') ? 'border-destructive' : ''}`}
                                 />
                             )}
                             {item.packagingType === 'Custom' && (
@@ -852,6 +910,9 @@ const QuoteForm = () => {
                                 placeholder="Enter custom packaging type"
                                 className="h-10 mt-2"
                               />
+                            )}
+                            {getItemError(index, 'packagingType') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'packagingType')}</p>
                             )}
                           </div>
                         )}
@@ -896,8 +957,11 @@ const QuoteForm = () => {
                               value={item.injectionBoxPacking || ''}
                               onChange={(e) => handleItemChange(index, 'injectionBoxPacking', e.target.value)}
                               placeholder="Enter box packing"
-                              className="h-10"
+                              className={`h-10 ${getItemError(index, 'injectionBoxPacking') ? 'border-destructive' : ''}`}
                             />
+                            {getItemError(index, 'injectionBoxPacking') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'injectionBoxPacking')}</p>
+                            )}
                           </div>
                         )}
 
@@ -911,7 +975,7 @@ const QuoteForm = () => {
                               value={item.injectionPacking || ''}
                               onValueChange={(value) => handleItemChange(index, 'injectionPacking', value)}
                             >
-                              <SelectTrigger className="w-full h-10">
+                            <SelectTrigger className={`w-full h-10 ${getItemError(index, 'injectionPacking') ? 'border-destructive' : ''}`}>
                                 <SelectValue placeholder="Select Injection Packing" />
                               </SelectTrigger>
                               <SelectContent>
@@ -956,7 +1020,7 @@ const QuoteForm = () => {
                                 value={item.cartonPacking}
                                 onValueChange={(value) => handleItemChange(index, 'cartonPacking', value)}
                             >
-                                <SelectTrigger className="w-full h-10">
+                                <SelectTrigger className={`w-full h-10 ${getItemError(index, 'cartonPacking') ? 'border-destructive' : ''}`}>
                                     <SelectValue placeholder="Select Carton" />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -973,6 +1037,9 @@ const QuoteForm = () => {
                                 className="h-10 mt-2"
                               />
                             )}
+                            {getItemError(index, 'cartonPacking') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'cartonPacking')}</p>
+                            )}
                           </div>
                         )}
 
@@ -986,7 +1053,7 @@ const QuoteForm = () => {
                               value={item.drySyrupWaterType || ''}
                               onValueChange={(value) => handleItemChange(index, 'drySyrupWaterType', value)}
                             >
-                              <SelectTrigger className="w-full h-10">
+                              <SelectTrigger className={`w-full h-10 ${getItemError(index, 'drySyrupWaterType') ? 'border-destructive' : ''}`}>
                                 <SelectValue placeholder="Select Water Type" />
                               </SelectTrigger>
                               <SelectContent>
@@ -994,6 +1061,9 @@ const QuoteForm = () => {
                                 <SelectItem value="Without Water">Without Water</SelectItem>
                               </SelectContent>
                             </Select>
+                            {getItemError(index, 'drySyrupWaterType') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'drySyrupWaterType')}</p>
+                            )}
                           </div>
                         )}
 
@@ -1030,9 +1100,14 @@ const QuoteForm = () => {
                               value={item.quantity}
                               onChange={(e) => handleItemChange(index, 'quantity', e.target.value)}
                               onKeyDown={handleNumericKeyDown}
-                              className="h-12 text-lg font-medium pl-3"
+                              className={`h-12 text-lg font-medium pl-3 ${getItemError(index, 'quantity') ? 'border-destructive' : ''}`}
                             />
                             <span className="absolute right-3 top-3.5 text-xs text-muted-foreground">Units</span>
+                          </div>
+                          <div className="min-h-[16px]">
+                            {getItemError(index, 'quantity') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'quantity')}</p>
+                            )}
                           </div>
                         </div>
 
@@ -1047,8 +1122,13 @@ const QuoteForm = () => {
                             value={item.mrp}
                             onChange={(e) => handleItemChange(index, 'mrp', e.target.value)}
                             onKeyDown={handleNumericKeyDown}
-                            className="h-12 text-lg pl-3"
+                            className={`h-12 text-lg pl-3 ${getItemError(index, 'mrp') ? 'border-destructive' : ''}`}
                           />
+                          <div className="min-h-[16px]">
+                            {getItemError(index, 'mrp') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'mrp')}</p>
+                            )}
+                          </div>
                         </div>
 
                          {/* Our Rate */}
@@ -1062,8 +1142,13 @@ const QuoteForm = () => {
                             value={item.rate}
                             onChange={(e) => handleItemChange(index, 'rate', e.target.value)}
                             onKeyDown={handleNumericKeyDown}
-                            className="h-12 text-xl font-bold text-primary pl-3 border-primary/20 focus:border-primary"
+                            className={`h-12 text-xl font-bold text-primary pl-3 border-primary/20 focus:border-primary ${getItemError(index, 'rate') ? 'border-destructive' : ''}`}
                           />
+                          <div className="min-h-[16px]">
+                            {getItemError(index, 'rate') && (
+                              <p className="text-xs text-destructive">{getItemError(index, 'rate')}</p>
+                            )}
+                          </div>
                         </div>
 
                         {/* Total Amount Display - REMOVED */}

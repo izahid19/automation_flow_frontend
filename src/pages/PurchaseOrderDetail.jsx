@@ -1,7 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { orderAPI } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -21,6 +22,7 @@ import {
   X,
   Clock,
   History,
+  Send,
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import PurchaseOrderPreview from '@/components/PurchaseOrderPreview';
@@ -32,16 +34,15 @@ const PurchaseOrderDetail = () => {
   const [loading, setLoading] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
   const [actionLoading, setActionLoading] = useState(false);
+  const [downloadLoading, setDownloadLoading] = useState(false);
+  const [resendLoading, setResendLoading] = useState(false);
   const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
   const { isAdmin, isAccountant } = useAuth();
+  const { socket } = useSocket();
 
-  useEffect(() => {
-    fetchOrder();
-  }, [id]);
-
-  const fetchOrder = async () => {
+  const fetchOrder = useCallback(async () => {
     try {
       const response = await orderAPI.getOne(id);
       setOrder(response.data.data);
@@ -51,28 +52,78 @@ const PurchaseOrderDetail = () => {
     } finally {
       setLoading(false);
     }
+  }, [id, navigate]);
+
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  // Listen for real-time updates to this PO
+  useEffect(() => {
+    if (!socket || !id) return;
+
+    const handlePOUpdate = (data) => {
+      // Only refresh if the update is for this PO
+      if (data.purchaseOrder?._id === id || data.purchaseOrder?.id === id) {
+        fetchOrder();
+      }
+    };
+
+    socket.on('po:status-updated', handlePOUpdate);
+    socket.on('po:payment-verified', handlePOUpdate);
+
+    return () => {
+      socket.off('po:status-updated', handlePOUpdate);
+      socket.off('po:payment-verified', handlePOUpdate);
+    };
+  }, [socket, id, fetchOrder]);
+
+  const handleDownloadPDF = async () => {
+    setDownloadLoading(true);
+    try {
+      const response = await orderAPI.downloadPDF(id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${order?.poNumber || 'purchase-order'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+    } catch (error) {
+      toast.error('Failed to download PDF');
+    } finally {
+      setDownloadLoading(false);
+    }
   };
 
-  const handleDownloadPDF = () => {
-    if (order?.pdfUrl) {
-      window.open(order.pdfUrl, '_blank');
-    } else {
-      toast.error('PDF not available');
+  const handleResendEmail = async () => {
+    setResendLoading(true);
+    try {
+      await orderAPI.send(id);
+      toast.success('Purchase order email resent');
+      fetchOrder();
+    } catch (error) {
+      toast.error(error.response?.data?.message || 'Failed to resend email');
+    } finally {
+      setResendLoading(false);
     }
   };
 
   const getStatusBadge = (status) => {
     const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary' },
-      sent: { label: 'Sent', variant: 'outline' },
-      acknowledged: { label: 'Acknowledged', variant: 'outline' },
-      in_production: { label: 'In Production', variant: 'default' },
-      shipped: { label: 'Shipped', variant: 'default' },
-      delivered: { label: 'Delivered', variant: 'default' },
-      completed: { label: 'Completed', variant: 'default' },
-      po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+      pending: { label: 'Pending', variant: 'outline', className: '' },
+      ready_for_po: { label: 'Ready for PO', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+      po_created: { label: 'PO Created', variant: 'default', className: 'bg-orange-500 text-white border-orange-500' },
+      sent: { label: 'Sent to Client', variant: 'outline', className: '' },
+      acknowledged: { label: 'Acknowledged', variant: 'outline', className: '' },
+      in_production: { label: 'In Production', variant: 'default', className: '' },
+      shipped: { label: 'Shipped', variant: 'default', className: '' },
+      delivered: { label: 'Delivered', variant: 'default', className: '' },
+      completed: { label: 'Completed', variant: 'default', className: '' },
+      po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-600 text-white border-green-600' },
+      draft: { label: 'Draft', variant: 'secondary', className: '' },
     };
-    const s = statusMap[status] || { label: status, variant: 'secondary' };
+    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
@@ -144,12 +195,24 @@ const PurchaseOrderDetail = () => {
             {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
             {showPreview ? 'Close Preview' : 'Preview PO'}
           </Button>
-          {order.pdfUrl && (
-            <Button onClick={handleDownloadPDF} variant="outline" className="gap-2">
-              <Download className="w-4 h-4" />
-              Download PDF
-            </Button>
-          )}
+          <Button
+            onClick={handleResendEmail}
+            variant="outline"
+            className="gap-2"
+            disabled={resendLoading}
+          >
+            {resendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send size={16} />}
+            {resendLoading ? 'Resending...' : 'Resend Email'}
+          </Button>
+          <Button
+            onClick={handleDownloadPDF}
+            variant="outline"
+            className="gap-2"
+            disabled={downloadLoading}
+          >
+            {downloadLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+            {downloadLoading ? 'Downloading...' : 'Download PDF'}
+          </Button>
         </div>
       </div>
 
@@ -186,12 +249,8 @@ const PurchaseOrderDetail = () => {
                     <p className="font-semibold text-primary">{order.poNumber}</p>
                   </div>
                   <div>
-                    <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
-                    <p className="font-semibold">{order.quoteNumber || order.quote?.quoteNumber || 'N/A'}</p>
-                  </div>
-                  <div>
                     <p className="text-sm text-muted-foreground mb-1">Status</p>
-                    {getStatusBadge(order.status)}
+                    {getStatusBadge(order.orderSheetStatus || order.status)}
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Created Date</p>
@@ -236,52 +295,6 @@ const PurchaseOrderDetail = () => {
               </CardContent>
             </Card>
 
-            {/* Quote Details (When goes to Accountant/Designer) */}
-            {quote && (
-              <Card>
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2">
-                    <FileText className="w-5 h-5" />
-                    Quote Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent className="space-y-6">
-                  {/* Quote Summary */}
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 pb-4 border-b">
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Quote Number</p>
-                      <p className="font-semibold text-primary">{quote.quoteNumber}</p>
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Quote Status</p>
-                      {getQuoteStatusBadge(quote.status)}
-                    </div>
-                    <div>
-                      <p className="text-sm text-muted-foreground mb-1">Client Name</p>
-                      <p className="font-semibold">{quote.clientName}</p>
-                    </div>
-                    {quote.clientEmail && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Client Email</p>
-                        <p className="font-medium">{quote.clientEmail}</p>
-                      </div>
-                    )}
-                    {quote.clientPhone && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Client Phone</p>
-                        <p className="font-medium">{quote.clientPhone}</p>
-                      </div>
-                    )}
-                    {quote.marketedBy && (
-                      <div>
-                        <p className="text-sm text-muted-foreground mb-1">Marketed By</p>
-                        <p className="font-medium">{quote.marketedBy}</p>
-                      </div>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
 
             {/* Order Items */}
             <Card>
@@ -290,7 +303,7 @@ const PurchaseOrderDetail = () => {
               </CardHeader>
               <CardContent className="space-y-4">
                 {order.items?.map((item, index) => {
-                   const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType);
+                   const showPackingField = !['Injection', 'I.V/Fluid', 'Lotion', 'Soap', 'Custom'].includes(item.formulationType);
                    
                    // Helper to render read-only field
                    const ReadOnlyField = ({ label, value }) => (
@@ -323,7 +336,14 @@ const PurchaseOrderDetail = () => {
                              <ReadOnlyField label="Brand Name" value={item.brandName} />
                              <ReadOnlyField label="Order Type" value={item.orderType} />
                              <ReadOnlyField label="Category" value={item.categoryType} />
-                             <ReadOnlyField label="Formulation" value={item.formulationType} />
+                            <ReadOnlyField
+                              label="Formulation"
+                              value={
+                                item.formulationType === 'Custom'
+                                  ? (item.customFormulationType || 'Custom')
+                                  : item.formulationType
+                              }
+                            />
 
                              {/* Colour of Soft Gelatin */}
                              {item.formulationType === 'Soft Gelatine' && (

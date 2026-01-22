@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useSocket } from '@/context/SocketContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -31,6 +32,7 @@ const CompletedOrders = () => {
   const [customDateTo, setCustomDateTo] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
   const navigate = useNavigate();
+  const { socket } = useSocket();
 
   const getDateRange = (filterType) => {
     const today = new Date();
@@ -160,18 +162,36 @@ const CompletedOrders = () => {
     fetchOrders();
   }, [fetchOrders]);
 
+  // Listen for real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      fetchOrders();
+    };
+
+    // PO events
+    socket.on('po:created', handleUpdate);
+    socket.on('po:status-updated', handleUpdate);
+    socket.on('po:payment-verified', handleUpdate);
+
+    return () => {
+      socket.off('po:created', handleUpdate);
+      socket.off('po:status-updated', handleUpdate);
+      socket.off('po:payment-verified', handleUpdate);
+    };
+  }, [socket, fetchOrders]);
+
   const handleDownloadPDF = async (id, poNumber) => {
     try {
-      const token = localStorage.getItem('token');
-      const response = await axios.get(`${API_URL}/purchase-orders/${id}`, {
-        headers: { Authorization: `Bearer ${token}` }
-      });
-      
-      if (response.data.data.pdfUrl) {
-        window.open(response.data.data.pdfUrl, '_blank');
-      } else {
-        toast.error('PDF not available');
-      }
+      const response = await orderAPI.downloadPDF(id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${poNumber || 'purchase-order'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
       toast.error('Failed to download PDF');
     }
@@ -191,6 +211,7 @@ const CompletedOrders = () => {
     const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
+
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -365,19 +386,17 @@ const CompletedOrders = () => {
                       </div>
                     </TableCell>
                     <TableCell>
-                      <div className="flex flex-col">
-                         {order.items?.length > 0 ? (
-                           <>
-                           <span className="font-medium text-sm">{order.items[0].brandName}</span>
-                           {order.items.length > 1 && (
-                             <span className="text-xs text-muted-foreground">
-                               + {order.items.length - 1} more
-                             </span>
-                           )}
-                           </>
-                         ) : (
-                           <span className="text-muted-foreground text-sm">-</span>
-                         )}
+                      <div className="flex flex-col gap-1">
+                        {order.items?.length > 0 ? (
+                          order.items.map((item, index) => (
+                            <span key={index} className="font-medium text-sm">
+                              {order.items.length > 1 ? `${index + 1}. ` : ''}
+                              {item.brandName || item.name || item.itemName || 'N/A'}
+                            </span>
+                          ))
+                        ) : (
+                          <span className="text-muted-foreground text-sm">-</span>
+                        )}
                       </div>
                     </TableCell>
                     <TableCell>

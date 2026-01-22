@@ -10,7 +10,9 @@ const PurchaseOrderPreview = ({ formData, items, manufacturer, totals }) => {
     companyPhone: '+917696275527',
     companyEmail: 'user@gmail.com',
     invoiceLabel: 'PURCHASE ORDER',
-    invoiceDesign: 'design2'
+    invoiceDesign: 'design2',
+    terms: 'Payment due within 30 days. All prices in INR.',
+    bankDetails: ''
   });
 
   useEffect(() => {
@@ -21,10 +23,14 @@ const PurchaseOrderPreview = ({ formData, items, manufacturer, totals }) => {
     try {
       const response = await settingsAPI.getAll();
       if (response.data.success) {
+        const data = response.data.data || {};
         setCompanySettings(prev => ({
           ...prev,
-          ...response.data.data,
-          invoiceLabel: 'PURCHASE ORDER' // Force label for PO
+          companyPhone: data.purchaseOrderPhone || prev.companyPhone,
+          companyEmail: data.purchaseOrderEmail || prev.companyEmail,
+          invoiceLabel: data.purchaseOrderLabel || 'PURCHASE ORDER',
+          invoiceDesign: data.purchaseOrderDesign || prev.invoiceDesign,
+          terms: data.purchaseOrderTerms || prev.terms,
         }));
       }
     } catch (error) {
@@ -76,15 +82,20 @@ const PurchaseOrderPreview = ({ formData, items, manufacturer, totals }) => {
       <div className="border-t pt-6 mt-6">
         <div className="flex justify-end">
           <div className="w-80 space-y-3">
-             <div className="flex justify-between text-gray-600">
-              <span>Subtotal:</span>
-              <span className="font-medium">₹{totals.subtotal.toFixed(2)}</span>
-            </div>
-            
             <div className="flex justify-between items-center pt-3 border-t border-gray-200">
               <span className="text-xl font-bold text-gray-800">Total:</span>
               <span className="text-xl font-bold text-emerald-600">₹{totals.total.toFixed(2)}</span>
             </div>
+          </div>
+        </div>
+
+        {/* Terms */}
+        <div className="grid grid-cols-2 gap-8 mt-8">
+          <div>
+            <h3 className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-2">Terms & Conditions</h3>
+            <p className="text-sm text-gray-600 whitespace-pre-wrap">
+              {companySettings.terms || 'Payment due within 30 days. All prices in INR.'}
+            </p>
           </div>
         </div>
 
@@ -99,10 +110,6 @@ const PurchaseOrderPreview = ({ formData, items, manufacturer, totals }) => {
         )}
       </div>
 
-      <div className="mt-12 text-center text-xs text-gray-400 pt-8 border-t">
-        <p>This is a computer generated purchase order and does not require a signature.</p>
-        <p className="mt-1">Thank you for your business!</p>
-      </div>
     </div>
   );
 };

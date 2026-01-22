@@ -1,6 +1,7 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
 import { quoteAPI } from '@/services/api';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
@@ -20,16 +21,13 @@ import toast from 'react-hot-toast';
 
 const Dashboard = () => {
   const { user, isAdmin, isManager, isSalesExecutive } = useAuth();
+  const { socket } = useSocket();
   const [stats, setStats] = useState(null);
   const [recentQuotes, setRecentQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
   const [exportLoading, setExportLoading] = useState(false);
 
-  useEffect(() => {
-    fetchDashboardData();
-  }, []);
-
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async () => {
     try {
       const [statsRes, quotesRes] = await Promise.all([
         quoteAPI.getStats(),
@@ -42,7 +40,51 @@ const Dashboard = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchDashboardData();
+  }, [fetchDashboardData]);
+
+  // Listen for real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      fetchDashboardData();
+    };
+
+    // Quote events
+    socket.on('quote:created', handleUpdate);
+    socket.on('quote:submitted', handleUpdate);
+    socket.on('quote:approved', handleUpdate);
+    socket.on('quote:rejected', handleUpdate);
+    socket.on('quote:design-updated', handleUpdate);
+    socket.on('quote:client-approved', handleUpdate);
+    socket.on('quote:client-order-updated', handleUpdate);
+    socket.on('quote:advance-payment-received', handleUpdate);
+    socket.on('quote:completed', handleUpdate);
+
+    // PO events
+    socket.on('po:created', handleUpdate);
+    socket.on('po:status-updated', handleUpdate);
+    socket.on('po:payment-verified', handleUpdate);
+
+    return () => {
+      socket.off('quote:created', handleUpdate);
+      socket.off('quote:submitted', handleUpdate);
+      socket.off('quote:approved', handleUpdate);
+      socket.off('quote:rejected', handleUpdate);
+      socket.off('quote:design-updated', handleUpdate);
+      socket.off('quote:client-approved', handleUpdate);
+      socket.off('quote:client-order-updated', handleUpdate);
+      socket.off('quote:advance-payment-received', handleUpdate);
+      socket.off('quote:completed', handleUpdate);
+      socket.off('po:created', handleUpdate);
+      socket.off('po:status-updated', handleUpdate);
+      socket.off('po:payment-verified', handleUpdate);
+    };
+  }, [socket, fetchDashboardData]);
 
   const handleExportExcel = async () => {
     setExportLoading(true);

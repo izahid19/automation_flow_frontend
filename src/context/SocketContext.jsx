@@ -67,6 +67,39 @@ export const SocketProvider = ({ children }) => {
         toast.success(`Design status updated for ${data.quote?.quoteNumber || ''}`);
       });
 
+      newSocket.on('quote:client-approved', (data) => {
+        toast.success(`Client order approved for ${data.quote?.quoteNumber || ''}`);
+      });
+
+      newSocket.on('quote:client-order-updated', (data) => {
+        toast.success(`Client order status updated for ${data.quote?.quoteNumber || ''}`);
+      });
+
+      newSocket.on('quote:advance-payment-received', (data) => {
+        toast.success(`Advance payment confirmed for ${data.quote?.quoteNumber || ''}`);
+      });
+
+      newSocket.on('quote:completed', (data) => {
+        toast.success(`Quote ${data.quote?.quoteNumber || ''} is now completed!`);
+      });
+
+      newSocket.on('quote:client-design-approved', (data) => {
+        toast.success(`Client design approved for ${data.quote?.quoteNumber || ''}`);
+      });
+
+      // Purchase Order event listeners
+      newSocket.on('po:created', (data) => {
+        toast.success(`Purchase Order created: ${data.purchaseOrder?.poNumber || 'New PO'}`);
+      });
+
+      newSocket.on('po:status-updated', (data) => {
+        toast.success(`PO ${data.purchaseOrder?.poNumber || ''} status updated to ${data.newStatus}`);
+      });
+
+      newSocket.on('po:payment-verified', (data) => {
+        toast.success(`Full payment verified for PO ${data.purchaseOrder?.poNumber || ''}`);
+      });
+
       setSocket(newSocket);
 
       return () => {

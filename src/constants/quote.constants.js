@@ -4,6 +4,7 @@ export const DEFAULT_ITEM = {
   orderType: 'New',
   categoryType: 'Drug',
   formulationType: 'Tablet',
+  customFormulationType: '',
   composition: '',
   packing: '',
   customPacking: '',

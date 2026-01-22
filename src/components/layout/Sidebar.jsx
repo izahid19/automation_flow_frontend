@@ -39,7 +39,9 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { path: '/manufacturers', label: 'Add Manufacturers', icon: Factory, roles: ['admin', 'manager'] },
     { path: '/users', label: 'Users', icon: Users, roles: ['admin'] },
     { path: '/invoice-label', label: 'Invoice Label', icon: Tag, roles: ['admin'] },
+    { path: '/purchase-order-label', label: 'PO Label', icon: Tag, roles: ['admin'] },
     { path: '/quote-mail-settings', label: 'Quote Mail Settings', icon: Mail, roles: ['admin', 'manager'] },
+    { path: '/po-mail-settings', label: 'PO Mail Settings', icon: Mail, roles: ['admin', 'manager'] },
   ];
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(user?.role || ''));

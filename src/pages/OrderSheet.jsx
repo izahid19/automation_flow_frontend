@@ -1,7 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { orderAPI } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
+import { useSocket } from '@/context/SocketContext';
+import { useDebounce } from '@/hooks/useDebounce';
+import { invalidateCache } from '@/hooks/useApiCache';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -25,32 +28,76 @@ import {
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+// Simple cache for order sheet data
+const orderSheetCache = new Map();
+const CACHE_TTL = 30000; // 30 seconds
+
 const OrderSheet = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [statusFilter, setStatusFilter] = useState(['all']);
-  const [pagination, setPagination] = useState({ page: 1, pages: 1 });
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const navigate = useNavigate();
   const { isAdmin, isManager } = useAuth();
+  const { socket } = useSocket();
+  const abortControllerRef = useRef(null);
 
-  const fetchOrders = useCallback(async () => {
-    try {
-      const params = { page: pagination.page, limit: 30 };
-      if (search) params.search = search;
-      if (statusFilter.length > 0 && !statusFilter.includes('all')) {
-        params.status = statusFilter.join(',');
+  // Debounce search to avoid excessive API calls
+  const debouncedSearch = useDebounce(search, 400);
+
+  // Generate cache key for current query
+  const getCacheKey = useCallback((params) => {
+    return `orderSheet_${JSON.stringify(params)}`;
+  }, []);
+
+  const fetchOrders = useCallback(async (forceRefresh = false) => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    const params = { page: pagination.page, limit: 30 };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter.length > 0 && !statusFilter.includes('all')) {
+      params.status = statusFilter.join(',');
+    }
+
+    const cacheKey = getCacheKey(params);
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = orderSheetCache.get(cacheKey);
+      if (cached && Date.now() < cached.expiry) {
+        setOrders(cached.data);
+        setPagination(cached.pagination);
+        setLoading(false);
+        return;
       }
+    }
 
+    try {
+      setLoading(true);
       const response = await orderAPI.getSheet(params);
+      
+      // Cache the response
+      orderSheetCache.set(cacheKey, {
+        data: response.data.data,
+        pagination: response.data.pagination,
+        expiry: Date.now() + CACHE_TTL
+      });
+
       setOrders(response.data.data);
       setPagination(response.data.pagination);
     } catch (error) {
-      toast.error('Failed to load order sheet');
+      if (error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
+        toast.error('Failed to load order sheet');
+      }
     } finally {
       setLoading(false);
     }
-  }, [search, pagination.page, statusFilter]);
+  }, [debouncedSearch, pagination.page, statusFilter, getCacheKey]);
 
   const toggleStatus = (value) => {
     setStatusFilter(prev => {
@@ -73,14 +120,57 @@ const OrderSheet = () => {
     fetchOrders();
   }, [fetchOrders]);
 
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
+  // Listen for real-time updates
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleUpdate = () => {
+      // Clear cache and refetch
+      orderSheetCache.clear();
+      fetchOrders(true);
+    };
+
+    // Quote events that affect order sheet
+    socket.on('quote:design-updated', handleUpdate);
+    socket.on('quote:advance-payment-received', handleUpdate);
+    socket.on('quote:completed', handleUpdate);
+    socket.on('quote:client-design-approved', handleUpdate);
+
+    // PO events
+    socket.on('po:created', handleUpdate);
+    socket.on('po:status-updated', handleUpdate);
+    socket.on('po:payment-verified', handleUpdate);
+
+    return () => {
+      socket.off('quote:design-updated', handleUpdate);
+      socket.off('quote:advance-payment-received', handleUpdate);
+      socket.off('quote:completed', handleUpdate);
+      socket.off('quote:client-design-approved', handleUpdate);
+      socket.off('po:created', handleUpdate);
+      socket.off('po:status-updated', handleUpdate);
+      socket.off('po:payment-verified', handleUpdate);
+    };
+  }, [socket, fetchOrders]);
+
   const handleDownloadPDF = async (id, poNumber) => {
     try {
-      const response = await orderAPI.getOne(id);
-      if (response.data.data.pdfUrl) {
-        window.open(response.data.data.pdfUrl, '_blank');
-      } else {
-        toast.error('PDF not available');
-      }
+      const response = await orderAPI.downloadPDF(id);
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      link.setAttribute('download', `${poNumber || 'purchase-order'}.pdf`);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
     } catch (error) {
       toast.error('Failed to download PDF');
     }
@@ -91,7 +181,28 @@ const OrderSheet = () => {
     navigate(`/purchase-orders/new?quoteId=${row.quote._id}&itemIndex=${row.itemIndex}`);
   };
 
-  const getQuoteStatusBadge = (quote) => {
+  // Memoized status maps to avoid recreation on every render
+  const quoteStatusMap = useMemo(() => ({
+    draft: { label: 'Draft', variant: 'secondary', className: '' },
+    pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: '' },
+    manager_approved: { label: 'Manager Approved', variant: 'outline', className: '' },
+    completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+  }), []);
+
+  const orderStatusMap = useMemo(() => ({
+    pending: { label: 'Pending', variant: 'outline', className: '' },
+    ready_for_po: { label: 'Ready for PO', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+    po_created: { label: 'PO Created', variant: 'default', className: 'bg-orange-500 text-white border-orange-500' },
+    sent: { label: 'Sent to Client', variant: 'outline', className: '' },
+    acknowledged: { label: 'Acknowledged', variant: 'outline', className: '' },
+    in_production: { label: 'In Production', variant: 'default', className: '' },
+    shipped: { label: 'Shipped', variant: 'default', className: '' },
+    delivered: { label: 'Delivered', variant: 'default', className: '' },
+    completed: { label: 'Completed', variant: 'default', className: '' },
+    po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-600 text-white border-green-600' },
+  }), []);
+
+  const getQuoteStatusBadge = useCallback((quote) => {
     if (!quote) return <Badge variant="secondary">Unknown</Badge>;
     
     const status = quote.status;
@@ -110,32 +221,22 @@ const OrderSheet = () => {
       return <Badge variant="outline">Design Pending</Badge>;
     }
     
-    const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary', className: '' },
-      pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: '' },
-      manager_approved: { label: 'Manager Approved', variant: 'outline', className: '' },
-      completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
-    };
-    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+    const s = quoteStatusMap[status] || { label: status, variant: 'secondary', className: '' };
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
-  };
+  }, [quoteStatusMap]);
 
-  const getOrderStatusBadge = (status) => {
-    const statusMap = {
-      pending: { label: 'Pending', variant: 'outline', className: '' },
-      ready_for_po: { label: 'Ready for PO', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
-      po_created: { label: 'PO Created', variant: 'default', className: 'bg-orange-500 text-white border-orange-500' },
-      sent: { label: 'Sent to Client', variant: 'outline', className: '' },
-      acknowledged: { label: 'Acknowledged', variant: 'outline', className: '' },
-      in_production: { label: 'In Production', variant: 'default', className: '' },
-      shipped: { label: 'Shipped', variant: 'default', className: '' },
-      delivered: { label: 'Delivered', variant: 'default', className: '' },
-      completed: { label: 'Completed', variant: 'default', className: '' },
-      po_completed: { label: 'PO Completed', variant: 'default', className: 'bg-green-600 text-white border-green-600' },
-    };
-    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
+  const getOrderStatusBadge = useCallback((status) => {
+    const s = orderStatusMap[status] || { label: status, variant: 'secondary', className: '' };
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
-  };
+  }, [orderStatusMap]);
+
+  // Memoized orders with computed values
+  const processedOrders = useMemo(() => {
+    return orders.map(row => ({
+      ...row,
+      itemAmount: row.item ? (row.item.quantity || 0) * (row.item.rate || 0) : 0
+    }));
+  }, [orders]);
 
 
 
@@ -249,7 +350,7 @@ const OrderSheet = () => {
             <div className="flex items-center justify-center py-12">
               <Loader2 className="w-8 h-8 animate-spin text-primary" />
             </div>
-          ) : orders.length === 0 ? (
+          ) : processedOrders.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
               <p className="text-muted-foreground mb-4">No orders found</p>
@@ -276,10 +377,7 @@ const OrderSheet = () => {
                 </TableRow>
               </TableHeader>
               <TableBody>
-                {orders.map((row, index) => {
-                  const itemAmount = row.item ? (row.item.quantity || 0) * (row.item.rate || 0) : 0;
-                  
-                  return (
+                {processedOrders.map((row) => (
                     <TableRow key={row._id}>
                       <TableCell>
                         {row.purchaseOrder ? (
@@ -341,7 +439,7 @@ const OrderSheet = () => {
                         </span>
                       </TableCell>
                       <TableCell className="font-semibold">
-                        ₹{itemAmount.toFixed(2)}
+                        ₹{row.itemAmount.toFixed(2)}
                       </TableCell>
                       <TableCell>
                         {getQuoteStatusBadge(row.quote)}
@@ -444,8 +542,7 @@ const OrderSheet = () => {
                           </div>
                       </TableCell>
                     </TableRow>
-                  );
-                })}
+                ))}
               </TableBody>
             </Table>
           )}

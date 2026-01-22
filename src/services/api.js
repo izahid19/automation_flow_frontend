@@ -56,6 +56,7 @@ export const quoteAPI = {
   approveSE: (id, data) => api.post(`/quotes/${id}/approve-se`, data),
   rejectSE: (id, data) => api.post(`/quotes/${id}/reject-se`, data),
   approveManager: (id, data) => api.post(`/quotes/${id}/approve-manager`, data),
+  rejectManager: (id, data) => api.post(`/quotes/${id}/reject-manager`, data),
   approveMD: (id, data) => api.post(`/quotes/${id}/approve-md`, data),
   rejectMD: (id, data) => api.post(`/quotes/${id}/reject-md`, data),
   updateClientOrderStatus: (id, data) => api.post(`/quotes/${id}/client-order-status`, data),
@@ -76,6 +77,7 @@ export const orderAPI = {
   getAll: (params) => api.get('/purchase-orders', { params }),
   getSheet: (params) => api.get('/purchase-orders/sheet', { params }),
   getOne: (id) => api.get(`/purchase-orders/${id}`),
+  downloadPDF: (id) => api.get(`/purchase-orders/${id}/pdf`, { responseType: 'blob' }),
   send: (id) => api.post(`/purchase-orders/${id}/send`),
   updateStatus: (id, data) => api.put(`/purchase-orders/${id}/status`, data),
   delete: (id) => api.delete(`/purchase-orders/${id}`),
@@ -98,6 +100,8 @@ export const settingsAPI = {
   update: (settings) => api.put('/settings', { settings }),
   getQuoteMailSettings: () => api.get('/settings/quote-mail'),
   updateQuoteMailSettings: (data) => api.put('/settings/quote-mail', data),
+  getPurchaseOrderMailSettings: () => api.get('/settings/po-mail'),
+  updatePurchaseOrderMailSettings: (data) => api.put('/settings/po-mail', data),
 };
 
 export default api;

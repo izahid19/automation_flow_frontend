@@ -32,8 +32,9 @@ export const FORMULATION_TYPES = [
   'Injection',
   'I.V/Fluid',
   'Lotion',
-  'Soap'
+  'Soap',
+  'Custom'
 ];
 
 // Formulations that don't require packing field
-export const NO_PACKING_FORMULATIONS = ['Injection', 'I.V/Fluid', 'Lotion', 'Soap'];
+export const NO_PACKING_FORMULATIONS = ['Injection', 'I.V/Fluid', 'Lotion', 'Soap', 'Custom'];

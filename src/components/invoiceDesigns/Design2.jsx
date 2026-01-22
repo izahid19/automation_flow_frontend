@@ -52,7 +52,11 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                     </div>
                     <div>
                       <span className="text-base text-gray-500">Formulation:</span>
-                      <p className="text-base font-medium">{item.formulationType || '-'}</p>
+                      <p className="text-base font-medium">
+                        {item.formulationType === 'Custom'
+                          ? (item.customFormulationType || 'Custom')
+                          : (item.formulationType || '-')}
+                      </p>
                     </div>
                     {item.formulationType === 'Injection' && item.injectionType && (
                       <div>
@@ -61,7 +65,7 @@ const Design2 = ({ quote, companySettings, items, hasSoftGelatin, hasBlister, to
                       </div>
                     )}
                     {/* Packing - Hide for I.V/Fluid, Lotion, and Soap */}
-                    {!['I.V/Fluid', 'Lotion', 'Soap'].includes(item.formulationType) && (
+                    {!['I.V/Fluid', 'Lotion', 'Soap', 'Custom'].includes(item.formulationType) && (
                     <div>
                       <span className="text-base text-gray-500">
                         {item.formulationType === 'Injection' && item.injectionType === 'Liquid Injection' 

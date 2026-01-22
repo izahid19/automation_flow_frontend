@@ -1,8 +1,9 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { quoteAPI } from '@/services/api';
 import { useSocket } from '@/context/SocketContext';
 import { useAuth } from '@/context/AuthContext';
+import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -32,6 +33,10 @@ import {
 } from "@/components/ui/tooltip";
 import toast from 'react-hot-toast';
 
+// Simple cache for quotes data
+const quotesCache = new Map();
+const CACHE_TTL = 30000; // 30 seconds
+
 const Quotes = () => {
   const [quotes, setQuotes] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -40,12 +45,16 @@ const Quotes = () => {
   const [dateFilter, setDateFilter] = useState('all');
   const [customDateFrom, setCustomDateFrom] = useState('');
   const [customDateTo, setCustomDateTo] = useState('');
-  const [pagination, setPagination] = useState({ page: 1, pages: 1 });
+  const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const [deleteConfirm, setDeleteConfirm] = useState({ open: false, id: null, quoteNumber: '' });
   const [deleteLoading, setDeleteLoading] = useState(false);
   const navigate = useNavigate();
   const { socket } = useSocket();
   const { isAdmin, isManager, isSalesExecutive } = useAuth();
+  const abortControllerRef = useRef(null);
+
+  // Debounce search to avoid excessive API calls
+  const debouncedSearch = useDebounce(search, 400);
 
   // Calculate date ranges for filters
   const getDateRange = useCallback((filterType) => {
@@ -135,32 +144,67 @@ const Quotes = () => {
     }
   };
 
-  const fetchQuotes = useCallback(async () => {
-    try {
-      const params = { page: pagination.page, limit: 30 };
-      if (search) params.search = search;
-      if (statusFilter.length > 0 && !statusFilter.includes('all')) {
-        params.status = statusFilter.join(',');
-      }
-      
-      // Add date filtering
-      if (dateFilter && dateFilter !== 'all') {
-        const dateRange = getDateRange(dateFilter);
-        if (dateRange && dateRange.from) {
-          params.dateFrom = dateRange.from;
-          params.dateTo = dateRange.to;
-        }
-      }
+  // Generate cache key for current query
+  const getCacheKey = useCallback((params) => {
+    return `quotes_${JSON.stringify(params)}`;
+  }, []);
 
+  const fetchQuotes = useCallback(async (forceRefresh = false) => {
+    // Cancel previous request
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+
+    const params = { page: pagination.page, limit: 30 };
+    if (debouncedSearch) params.search = debouncedSearch;
+    if (statusFilter.length > 0 && !statusFilter.includes('all')) {
+      params.status = statusFilter.join(',');
+    }
+    
+    // Add date filtering
+    if (dateFilter && dateFilter !== 'all') {
+      const dateRange = getDateRange(dateFilter);
+      if (dateRange && dateRange.from) {
+        params.dateFrom = dateRange.from;
+        params.dateTo = dateRange.to;
+      }
+    }
+
+    const cacheKey = getCacheKey(params);
+
+    // Check cache first (unless force refresh)
+    if (!forceRefresh) {
+      const cached = quotesCache.get(cacheKey);
+      if (cached && Date.now() < cached.expiry) {
+        setQuotes(cached.data);
+        setPagination(cached.pagination);
+        setLoading(false);
+        return;
+      }
+    }
+
+    try {
+      setLoading(true);
       const response = await quoteAPI.getAll(params);
+      
+      // Cache the response
+      quotesCache.set(cacheKey, {
+        data: response.data.data,
+        pagination: response.data.pagination,
+        expiry: Date.now() + CACHE_TTL
+      });
+
       setQuotes(response.data.data);
       setPagination(response.data.pagination);
     } catch (error) {
-      toast.error('Failed to load quotes');
+      if (error.name !== 'AbortError' && error.code !== 'ERR_CANCELED') {
+        toast.error('Failed to load quotes');
+      }
     } finally {
       setLoading(false);
     }
-  }, [search, statusFilter, dateFilter, customDateFrom, customDateTo, pagination.page, getDateRange]);
+  }, [debouncedSearch, statusFilter, dateFilter, customDateFrom, customDateTo, pagination.page, getDateRange, getCacheKey]);
 
   const toggleStatus = (value) => {
     setStatusFilter(prev => {
@@ -183,20 +227,36 @@ const Quotes = () => {
     fetchQuotes();
   }, [fetchQuotes]);
 
+  // Cleanup abort controller on unmount
+  useEffect(() => {
+    return () => {
+      if (abortControllerRef.current) {
+        abortControllerRef.current.abort();
+      }
+    };
+  }, []);
+
   // Listen for real-time quote updates
   useEffect(() => {
     if (!socket) return;
 
     const handleQuoteUpdate = () => {
-      // Refresh quotes list when any quote event occurs
-      fetchQuotes();
+      // Clear cache and refresh quotes list
+      quotesCache.clear();
+      fetchQuotes(true);
     };
 
+    // All quote-related events
     socket.on('quote:created', handleQuoteUpdate);
     socket.on('quote:submitted', handleQuoteUpdate);
     socket.on('quote:approved', handleQuoteUpdate);
     socket.on('quote:rejected', handleQuoteUpdate);
     socket.on('quote:design-updated', handleQuoteUpdate);
+    socket.on('quote:client-approved', handleQuoteUpdate);
+    socket.on('quote:client-order-updated', handleQuoteUpdate);
+    socket.on('quote:advance-payment-received', handleQuoteUpdate);
+    socket.on('quote:completed', handleQuoteUpdate);
+    socket.on('quote:client-design-approved', handleQuoteUpdate);
 
     return () => {
       socket.off('quote:created', handleQuoteUpdate);
@@ -204,6 +264,11 @@ const Quotes = () => {
       socket.off('quote:approved', handleQuoteUpdate);
       socket.off('quote:rejected', handleQuoteUpdate);
       socket.off('quote:design-updated', handleQuoteUpdate);
+      socket.off('quote:client-approved', handleQuoteUpdate);
+      socket.off('quote:client-order-updated', handleQuoteUpdate);
+      socket.off('quote:advance-payment-received', handleQuoteUpdate);
+      socket.off('quote:completed', handleQuoteUpdate);
+      socket.off('quote:client-design-approved', handleQuoteUpdate);
     };
   }, [socket, fetchQuotes]);
 
@@ -217,7 +282,9 @@ const Quotes = () => {
       await quoteAPI.delete(deleteConfirm.id);
       toast.success('Quote deleted');
       setDeleteConfirm({ open: false, id: null, quoteNumber: '' });
-      fetchQuotes();
+      // Clear cache and refetch
+      quotesCache.clear();
+      fetchQuotes(true);
     } catch (error) {
       toast.error('Failed to delete quote');
     } finally {
@@ -240,20 +307,32 @@ const Quotes = () => {
     }
   };
 
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary', className: '' },
-      quote_submitted: { label: 'Quote Submitted', variant: 'outline', className: '' },
-      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500' },
-      manager_approved: { label: 'Manager Approved', variant: 'default', className: 'bg-blue-500 text-white border-blue-500' },
-      manager_rejected: { label: 'Manager Rejected', variant: 'destructive', className: 'bg-red-500 text-white border-red-500' },
-      pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: 'bg-orange-500/10 text-orange-500 border-orange-500' },
-      pending_designer: { label: 'Pending Designer', variant: 'outline', className: 'bg-purple-500/10 text-purple-500 border-purple-500' },
-      completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
-    };
+  // Memoized status map to avoid recreation on every render
+  const statusMap = useMemo(() => ({
+    draft: { label: 'Draft', variant: 'secondary', className: '' },
+    quote_submitted: { label: 'Quote Submitted', variant: 'outline', className: '' },
+    pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500' },
+    manager_approved: { label: 'Manager Approved', variant: 'default', className: 'bg-blue-500 text-white border-blue-500' },
+    manager_rejected: { label: 'Manager Rejected', variant: 'destructive', className: 'bg-red-500 text-white border-red-500' },
+    pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: 'bg-orange-500/10 text-orange-500 border-orange-500' },
+    pending_designer: { label: 'Pending Designer', variant: 'outline', className: 'bg-purple-500/10 text-purple-500 border-purple-500' },
+    completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
+  }), []);
+
+  const getStatusBadge = useCallback((status) => {
     const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
-  };
+  }, [statusMap]);
+
+  // Memoized quotes with computed values for table rendering
+  const processedQuotes = useMemo(() => {
+    return quotes.map(quote => ({
+      ...quote,
+      formattedDate: new Date(quote.createdAt).toLocaleDateString('en-GB'),
+      formattedTime: new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+      formattedTotal: quote.totalAmount?.toFixed(2) || '0.00'
+    }));
+  }, [quotes]);
 
   return (
     <div className="space-y-6 animate-fade-in">
