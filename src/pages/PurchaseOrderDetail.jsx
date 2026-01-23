@@ -39,7 +39,7 @@ const PurchaseOrderDetail = () => {
   const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isAccountant, isDesigner } = useAuth();
+  const { isAdmin, isAccountant, isDesigner, isManager } = useAuth();
   const { socket } = useSocket();
 
   const fetchOrder = useCallback(async () => {
@@ -127,6 +127,10 @@ const PurchaseOrderDetail = () => {
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
+  // Permission checks
+  const canVerifyPayment = (isAdmin || isAccountant) && order?.status === 'sent';
+  const canResendEmail = (isAdmin || isManager) && order?.status !== 'draft';
+
   const handleVerifyFullPayment = async () => {
     setShowPaymentConfirm(false);
     setActionLoading(true);
@@ -196,15 +200,17 @@ const PurchaseOrderDetail = () => {
             {showPreview ? <EyeOff size={16} /> : <Eye size={16} />}
             {showPreview ? 'Close Preview' : 'Preview PO'}
           </Button>
-          <Button
-            onClick={handleResendEmail}
-            variant="outline"
-            className="gap-2"
-            disabled={resendLoading}
-          >
-            {resendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send size={16} />}
-            {resendLoading ? 'Resending...' : 'Resend Email'}
-          </Button>
+          {canResendEmail && (
+            <Button
+              onClick={handleResendEmail}
+              variant="outline"
+              className="gap-2"
+              disabled={resendLoading}
+            >
+              {resendLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send size={16} />}
+              {resendLoading ? 'Resending...' : 'Resend Email'}
+            </Button>
+          )}
           <Button
             onClick={handleDownloadPDF}
             variant="outline"
@@ -248,7 +254,7 @@ const PurchaseOrderDetail = () => {
                 <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">PO Number</p>
-                    <p className="font-semibold text-primary">{order.poNumber}</p>
+                    <p className="font-semibold text-green-500">{order.poNumber}</p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground mb-1">Status</p>

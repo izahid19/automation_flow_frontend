@@ -347,7 +347,7 @@ const CompletedOrders = () => {
                   <TableRow key={order._id}>
                     <TableCell>
                       <span 
-                        className="text-primary font-medium cursor-pointer hover:underline"
+                        className="text-green-500 font-medium cursor-pointer hover:underline"
                         onClick={() => navigate(`/purchase-orders/${order._id}`)}
                       >
                         {order.poNumber}

@@ -517,8 +517,8 @@ const OrderSheet = () => {
                   <TableHead>Order Type</TableHead>
                   <TableHead>Quantity</TableHead>
                   <TableHead>MRP</TableHead>
-                  <TableHead>Rate</TableHead>
-                  <TableHead>Amount</TableHead>
+                  {!isDesigner && <TableHead>Rate</TableHead>}
+                  {!isDesigner && <TableHead>Amount</TableHead>}
                   <TableHead>Quote Status</TableHead>
                   <TableHead>Order Status</TableHead>
                   <TableHead>Manufacturer</TableHead>
@@ -586,14 +586,18 @@ const OrderSheet = () => {
                           {row.item ? `₹${row.item.mrp || '0'}` : '-'}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        <span className="text-sm">
-                          {row.item ? `₹${row.item.rate || '0'}` : '-'}
-                        </span>
-                      </TableCell>
-                      <TableCell className="font-semibold">
-                        ₹{row.itemAmount.toFixed(2)}
-                      </TableCell>
+                      {!isDesigner && (
+                        <TableCell>
+                          <span className="text-sm">
+                            {row.item ? `₹${row.item.rate || '0'}` : '-'}
+                          </span>
+                        </TableCell>
+                      )}
+                      {!isDesigner && (
+                        <TableCell className="font-semibold">
+                          ₹{row.itemAmount.toFixed(2)}
+                        </TableCell>
+                      )}
                       <TableCell>
                         {getQuoteStatusBadge(row.quote)}
                       </TableCell>

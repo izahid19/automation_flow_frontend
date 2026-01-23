@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
+import { StatusBadge } from '@/components/shared';
 import { 
   FileText, 
   Clock, 
@@ -18,6 +19,7 @@ import {
   FileSpreadsheet
 } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { formatCurrency, formatDate, formatTime } from '@/utils/formatters';
 
 const Dashboard = () => {
   const { user, isAdmin, isManager, isSalesExecutive } = useAuth();
@@ -46,7 +48,7 @@ const Dashboard = () => {
     fetchDashboardData();
   }, [fetchDashboardData]);
 
-  // Listen for real-time updates
+  // Real-time socket updates
   useEffect(() => {
     if (!socket) return;
 
@@ -54,36 +56,15 @@ const Dashboard = () => {
       fetchDashboardData();
     };
 
-    // Quote events
-    socket.on('quote:created', handleUpdate);
-    socket.on('quote:submitted', handleUpdate);
-    socket.on('quote:approved', handleUpdate);
-    socket.on('quote:rejected', handleUpdate);
-    socket.on('quote:design-updated', handleUpdate);
-    socket.on('quote:client-approved', handleUpdate);
-    socket.on('quote:client-order-updated', handleUpdate);
-    socket.on('quote:advance-payment-received', handleUpdate);
-    socket.on('quote:completed', handleUpdate);
+    const events = [
+      'quote:created', 'quote:submitted', 'quote:approved', 'quote:rejected',
+      'quote:design-updated', 'quote:client-approved', 'quote:client-order-updated',
+      'quote:advance-payment-received', 'quote:completed',
+      'po:created', 'po:status-updated', 'po:payment-verified'
+    ];
 
-    // PO events
-    socket.on('po:created', handleUpdate);
-    socket.on('po:status-updated', handleUpdate);
-    socket.on('po:payment-verified', handleUpdate);
-
-    return () => {
-      socket.off('quote:created', handleUpdate);
-      socket.off('quote:submitted', handleUpdate);
-      socket.off('quote:approved', handleUpdate);
-      socket.off('quote:rejected', handleUpdate);
-      socket.off('quote:design-updated', handleUpdate);
-      socket.off('quote:client-approved', handleUpdate);
-      socket.off('quote:client-order-updated', handleUpdate);
-      socket.off('quote:advance-payment-received', handleUpdate);
-      socket.off('quote:completed', handleUpdate);
-      socket.off('po:created', handleUpdate);
-      socket.off('po:status-updated', handleUpdate);
-      socket.off('po:payment-verified', handleUpdate);
-    };
+    events.forEach(event => socket.on(event, handleUpdate));
+    return () => events.forEach(event => socket.off(event, handleUpdate));
   }, [socket, fetchDashboardData]);
 
   const handleExportExcel = async () => {
@@ -144,21 +125,6 @@ const Dashboard = () => {
       gradient: 'from-purple-500 to-violet-500',
     },
   ];
-
-  const getStatusBadge = (status) => {
-    const statusMap = {
-      draft: { label: 'Draft', variant: 'secondary', className: '' },
-      quote_submitted: { label: 'Quote Submitted', variant: 'outline', className: '' },
-      pending_manager_approval: { label: 'Pending Manager Approval', variant: 'outline', className: 'bg-yellow-500/10 text-yellow-500 border-yellow-500' },
-      manager_approved: { label: 'Manager Approved', variant: 'default', className: 'bg-blue-500 text-white border-blue-500' },
-      manager_rejected: { label: 'Manager Rejected', variant: 'destructive', className: 'bg-red-500 text-white border-red-500' },
-      pending_accountant: { label: 'Pending Accountant', variant: 'outline', className: 'bg-orange-500/10 text-orange-500 border-orange-500' },
-      pending_designer: { label: 'Pending Designer', variant: 'outline', className: 'bg-purple-500/10 text-purple-500 border-purple-500' },
-      completed_quote: { label: 'Quote Completed', variant: 'default', className: 'bg-green-500 text-white border-green-500' },
-    };
-    const s = statusMap[status] || { label: status, variant: 'secondary', className: '' };
-    return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
-  };
 
   if (loading) {
     return (
@@ -297,16 +263,17 @@ const Dashboard = () => {
                       <div className="flex flex-col gap-1">
                         {quote.items && quote.items.length > 0 ? (
                            quote.items.map((item, index) => (
-                             <span 
+                             <Badge 
                                key={index} 
-                               className={`badge badge-outline text-xs px-2 py-0.5 rounded-full border w-fit ${
+                               variant="outline"
+                               className={`text-xs w-fit ${
                                  item.orderType === 'Repeat'
                                    ? 'bg-red-500/10 text-red-500 border-red-500'
                                    : 'bg-green-500/10 text-green-500 border-green-500'
                                }`}
                              >
                                {item.orderType || 'New'}
-                             </span>
+                             </Badge>
                            ))
                         ) : '-'}
                       </div>
@@ -327,7 +294,7 @@ const Dashboard = () => {
                         {quote.items && quote.items.length > 0 ? (
                           quote.items.map((item, index) => (
                             <span key={index} className="text-sm">
-                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.mrp ? `₹${item.mrp}` : '-'}
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.mrp ? formatCurrency(item.mrp) : '-'}
                             </span>
                           ))
                         ) : '-'}
@@ -338,18 +305,18 @@ const Dashboard = () => {
                         {quote.items && quote.items.length > 0 ? (
                           quote.items.map((item, index) => (
                             <span key={index} className="text-sm">
-                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.rate ? `₹${item.rate}` : '-'}
+                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.rate ? formatCurrency(item.rate) : '-'}
                             </span>
                           ))
                         ) : '-'}
                       </div>
                     </TableCell>
-                    <TableCell className="font-semibold">₹{quote.totalAmount?.toFixed(2)}</TableCell>
-                    <TableCell>{getStatusBadge(quote.status)}</TableCell>
+                    <TableCell className="font-semibold">{formatCurrency(quote.totalAmount)}</TableCell>
+                    <TableCell><StatusBadge status={quote.status} type="quote" /></TableCell>
                     <TableCell className="text-muted-foreground">
                       <div className="flex flex-col">
-                        <span className="font-medium">{new Date(quote.createdAt).toLocaleDateString('en-GB')}</span>
-                        <span className="text-xs text-muted-foreground">{new Date(quote.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                        <span className="font-medium">{formatDate(quote.createdAt)}</span>
+                        <span className="text-xs text-muted-foreground">{formatTime(quote.createdAt)}</span>
                       </div>
                     </TableCell>
                   </TableRow>
