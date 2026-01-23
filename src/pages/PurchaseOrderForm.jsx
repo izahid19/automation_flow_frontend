@@ -381,27 +381,32 @@ const PurchaseOrderForm = () => {
   return (
     <div className="min-h-screen pb-8">
       {/* Header */}
-      <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 px-1">
         <div className="flex items-center gap-4">
           <Button
             variant="ghost"
             size="icon"
             onClick={() => navigate('/purchase-orders')}
+            className="rounded-full hover:bg-primary/10 transition-colors"
           >
             <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">Create New Purchase Order</h1>
-            <p className="text-muted-foreground">Fill in the details to create a purchase order</p>
+            <h1 className="text-2xl md:text-3xl font-bold bg-linear-to-r from-foreground to-foreground/70 bg-clip-text">
+              Create Purchase Order
+            </h1>
+            <p className="text-muted-foreground text-sm md:text-base">
+              Fill in the details to generate your document
+            </p>
           </div>
         </div>
         <Button
           variant={showPreview ? "default" : "outline"}
           onClick={() => setShowPreview(!showPreview)}
-          className="gap-2"
+          className={`gap-2 h-11 px-6 shadow-sm transition-all ${showPreview ? 'bg-primary' : 'hover:border-primary/50'}`}
         >
           {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
-          {showPreview ? 'Close Preview' : 'Preview PO'}
+          <span className="font-medium">{showPreview ? 'Close Preview' : 'Preview Document'}</span>
         </Button>
       </div>
       
@@ -415,12 +420,26 @@ const PurchaseOrderForm = () => {
       )}
 
       {showPreview ? (
-        <PurchaseOrderPreview 
-          formData={formData}
-          items={items}
-          manufacturer={selectedManufacturer}
-          totals={{ subtotal, total }}
-        />
+        <Card className="border-2 border-primary overflow-hidden shadow-xl">
+          <CardHeader className="bg-primary/5 py-4 border-b border-primary/10">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+              <Eye size={20} />
+              Purchase Order Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 bg-secondary/10">
+            <div className="w-full h-[850px] overflow-auto p-4 md:p-8 custom-scrollbar">
+              <div className="min-w-[1000px] max-w-[1000px] mx-auto bg-white shadow-[0_0_50px_-12px_rgba(0,0,0,0.3)] ring-1 ring-border rounded-sm">
+                <PurchaseOrderPreview 
+                  formData={formData}
+                  items={items}
+                  manufacturer={selectedManufacturer}
+                  totals={{ subtotal, total }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Form */}
@@ -502,15 +521,14 @@ const PurchaseOrderForm = () => {
                 </div>
               )}
 
-              <div className="flex items-center gap-2">
-                <input
-                  type="checkbox"
+              <div className="flex items-center space-x-3 pt-2">
+                <Checkbox
                   id="hidePurchaseRate"
                   checked={formData.hidePurchaseRate}
-                  onChange={(e) => handleFormChange('hidePurchaseRate', e.target.checked)}
-                  className="h-4 w-4 rounded border-gray-300"
+                  onCheckedChange={(checked) => handleFormChange('hidePurchaseRate', checked)}
+                  className="h-5 w-5"
                 />
-                <Label htmlFor="hidePurchaseRate" className="cursor-pointer">
+                <Label htmlFor="hidePurchaseRate" className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer">
                   Hide purchase rate in PDF
                 </Label>
               </div>
@@ -519,8 +537,25 @@ const PurchaseOrderForm = () => {
 
           {/* PO Items */}
           <Card>
-            <CardHeader className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-              <CardTitle>Purchase Order Items</CardTitle>
+            <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+              <CardTitle className="text-xl font-semibold">Order Items</CardTitle>
+              {quoteId && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    fetchPendingOrderSheetItems({
+                      includeAll: true,
+                    });
+                    setShowAddItemModal(true);
+                  }}
+                  className="w-full sm:w-auto gap-2 hover:bg-primary/10 hover:border-primary/50"
+                >
+                  <Plus size={14} />
+                  Add pending item
+                </Button>
+              )}
             </CardHeader>
             <CardContent className="space-y-4">
               {items.map((item, index) => {
@@ -539,16 +574,15 @@ const PurchaseOrderForm = () => {
                 );
 
                 return (
-                  <Card key={index} className="relative border border-border/50 bg-card">
-                    <CardContent className="pt-6 space-y-6">
+                  <Card key={index} className="relative border border-border/50 bg-card overflow-hidden transition-all hover:border-primary/30 group">
+                    <CardContent className="p-0">
                       {/* Item Header */}
-                      <div className="flex items-center justify-between border-b border-border/40 pb-3">
-                      <div className="flex items-center justify-between">
+                      <div className="flex items-center justify-between bg-muted/20 px-4 py-3 border-b border-border/40">
                         <div className="flex items-center gap-3">
-                          <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
+                          <span className="flex items-center justify-center w-7 h-7 rounded-full bg-primary/10 text-primary font-bold text-xs">
                             {index + 1}
                           </span>
-                          <span className="font-semibold text-foreground">
+                          <span className="font-semibold text-sm uppercase tracking-wider text-muted-foreground">
                             Product Details
                           </span>
                         </div>
@@ -558,15 +592,14 @@ const PurchaseOrderForm = () => {
                             variant="ghost"
                             size="icon"
                             onClick={() => removeItem(index)}
-                            className="text-destructive hover:text-destructive"
+                            className="h-8 w-8 text-destructive hover:bg-destructive/10 transition-colors"
                           >
                             <Trash2 size={16} />
                           </Button>
                         )}
                       </div>
-                      </div>
 
-                      <div className="space-y-6">
+                      <div className="p-5 space-y-6">
                         {/* Product Specifications Section */}
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                           <ReadOnlyField label="Brand Name" value={item.brandName} />

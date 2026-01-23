@@ -143,7 +143,7 @@ const Dashboard = () => {
           <p className="text-muted-foreground">Here's what's happening with your quotes</p>
         </div>
         <div className="flex gap-2">
-          {isAdmin && (
+          {/* {isAdmin && (
             <Button 
               variant="outline" 
               onClick={handleExportExcel}
@@ -156,7 +156,7 @@ const Dashboard = () => {
               )}
               {exportLoading ? 'Exporting...' : 'Export Excel'}
             </Button>
-          )}
+          )} */}
           {(isAdmin || isManager || isSalesExecutive) && (
             <Button asChild>
               <Link to="/quotes/new">
@@ -260,113 +260,117 @@ const Dashboard = () => {
               )}
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Quote Number</TableHead>
-                  <TableHead>Client Name</TableHead>
-                  <TableHead>Quote Item Names</TableHead>
-                  <TableHead>Order Type</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>MRP</TableHead>
-                  <TableHead>Our Rate</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead>Date</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {recentQuotes.map((quote) => (
-                  <TableRow key={quote._id}>
-                    <TableCell>
-                      <Link
-                        to={`/quotes/${quote._id}`}
-                        className="text-primary hover:underline font-medium"
-                      >
-                        {quote.quoteNumber}
-                      </Link>
-                    </TableCell>
-                    <TableCell>
-                      <div>
-                        <p className="font-medium">{quote.clientName}</p>
-                        <p className="text-xs text-muted-foreground">{quote.clientEmail}</p>
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1 max-w-[200px]">
-                        {quote.items && quote.items.length > 0 ? (
-                          quote.items.map((item, index) => (
-                            <span key={index} className="text-sm font-medium">
-                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.brandName || item.name}
-                            </span>
-                          ))
-                        ) : '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {quote.items && quote.items.length > 0 ? (
-                           quote.items.map((item, index) => (
-                             <Badge 
-                               key={index} 
-                               variant="outline"
-                               className={`text-xs w-fit ${
-                                 item.orderType === 'Repeat'
-                                   ? 'bg-red-500/10 text-red-500 border-red-500'
-                                   : 'bg-green-500/10 text-green-500 border-green-500'
-                               }`}
-                             >
-                               {item.orderType || 'New'}
-                             </Badge>
-                           ))
-                        ) : '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {quote.items && quote.items.length > 0 ? (
-                          quote.items.map((item, index) => (
-                            <span key={index} className="text-sm">
-                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.quantity}
-                            </span>
-                          ))
-                        ) : '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {quote.items && quote.items.length > 0 ? (
-                          quote.items.map((item, index) => (
-                            <span key={index} className="text-sm">
-                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.mrp ? formatCurrency(item.mrp) : '-'}
-                            </span>
-                          ))
-                        ) : '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell>
-                      <div className="flex flex-col gap-1">
-                        {quote.items && quote.items.length > 0 ? (
-                          quote.items.map((item, index) => (
-                            <span key={index} className="text-sm">
-                              {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.rate ? formatCurrency(item.rate) : '-'}
-                            </span>
-                          ))
-                        ) : '-'}
-                      </div>
-                    </TableCell>
-                    <TableCell className="font-semibold">{formatCurrency(quote.totalAmount)}</TableCell>
-                    <TableCell><StatusBadge status={quote.status} type="quote" /></TableCell>
-                    <TableCell className="text-muted-foreground">
-                      <div className="flex flex-col">
-                        <span className="font-medium">{formatDate(quote.createdAt)}</span>
-                        <span className="text-xs text-muted-foreground">{formatTime(quote.createdAt)}</span>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+            <div className="overflow-x-auto -mx-2 sm:mx-0">
+              <div className="min-w-full inline-block align-middle">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead className="whitespace-nowrap">Quote Number</TableHead>
+                      <TableHead className="whitespace-nowrap">Client Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Quote Item Names</TableHead>
+                      <TableHead className="whitespace-nowrap">Order Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                      <TableHead className="whitespace-nowrap">MRP</TableHead>
+                      <TableHead className="whitespace-nowrap">Our Rate</TableHead>
+                      <TableHead className="whitespace-nowrap">Amount</TableHead>
+                      <TableHead className="whitespace-nowrap">Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Date</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {recentQuotes.map((quote) => (
+                      <TableRow key={quote._id}>
+                        <TableCell>
+                          <Link
+                            to={`/quotes/${quote._id}`}
+                            className="text-primary hover:underline font-medium whitespace-nowrap"
+                          >
+                            {quote.quoteNumber}
+                          </Link>
+                        </TableCell>
+                        <TableCell>
+                          <div className="min-w-[150px]">
+                            <p className="font-medium">{quote.clientName}</p>
+                            <p className="text-xs text-muted-foreground">{quote.clientEmail}</p>
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 min-w-[150px]">
+                            {quote.items && quote.items.length > 0 ? (
+                              quote.items.map((item, index) => (
+                                <span key={index} className="text-sm font-medium">
+                                  {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.brandName || item.name}
+                                </span>
+                              ))
+                            ) : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 min-w-[100px]">
+                            {quote.items && quote.items.length > 0 ? (
+                               quote.items.map((item, index) => (
+                                 <Badge 
+                                   key={index} 
+                                   variant="outline"
+                                   className={`text-xs w-fit ${
+                                     item.orderType === 'Repeat'
+                                       ? 'bg-red-500/10 text-red-500 border-red-500'
+                                       : 'bg-green-500/10 text-green-500 border-green-500'
+                                   }`}
+                                 >
+                                   {item.orderType || 'New'}
+                                 </Badge>
+                               ))
+                            ) : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 min-w-[80px]">
+                            {quote.items && quote.items.length > 0 ? (
+                              quote.items.map((item, index) => (
+                                <span key={index} className="text-sm">
+                                  {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.quantity}
+                                </span>
+                              ))
+                            ) : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 min-w-[100px]">
+                            {quote.items && quote.items.length > 0 ? (
+                              quote.items.map((item, index) => (
+                                <span key={index} className="text-sm">
+                                  {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.mrp ? formatCurrency(item.mrp) : '-'}
+                                </span>
+                              ))
+                            ) : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex flex-col gap-1 min-w-[100px]">
+                            {quote.items && quote.items.length > 0 ? (
+                              quote.items.map((item, index) => (
+                                <span key={index} className="text-sm">
+                                  {quote.items.length > 1 ? `${index + 1}. ` : ''}{item.rate ? formatCurrency(item.rate) : '-'}
+                                </span>
+                              ))
+                            ) : '-'}
+                          </div>
+                        </TableCell>
+                        <TableCell className="font-semibold whitespace-nowrap">{formatCurrency(quote.totalAmount)}</TableCell>
+                        <TableCell className="whitespace-nowrap"><StatusBadge status={quote.status} type="quote" /></TableCell>
+                        <TableCell className="text-muted-foreground whitespace-nowrap">
+                          <div className="flex flex-col">
+                            <span className="font-medium">{formatDate(quote.createdAt)}</span>
+                            <span className="text-xs text-muted-foreground">{formatTime(quote.createdAt)}</span>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </div>
+            </div>
           )}
         </CardContent>
       </Card>

@@ -551,21 +551,21 @@ const OrderSheet = () => {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    {!isSalesExecutive && <TableHead>PO Number</TableHead>}
-                    <TableHead>Quote Number</TableHead>
-                    <TableHead>Client Name</TableHead>
-                    <TableHead>Item Name</TableHead>
-                    <TableHead>Order Type</TableHead>
-                    <TableHead>Quantity</TableHead>
-                    <TableHead>MRP</TableHead>
-                    {!isDesigner && <TableHead>Rate</TableHead>}
-                    {!isDesigner && <TableHead>Amount</TableHead>}
-                    <TableHead>Quote Status</TableHead>
-                    <TableHead>Order Status</TableHead>
-                    <TableHead>Manufacturer</TableHead>
-                    {!isSalesExecutive && <TableHead>Created Date</TableHead>}
-                    <TableHead>Delivery Date</TableHead>
-                    {!isSalesExecutive && !isDesigner && <TableHead className="text-right">Actions</TableHead>}
+                    {!isSalesExecutive && <TableHead className="whitespace-nowrap">PO Number</TableHead>}
+                    <TableHead className="whitespace-nowrap">Quote Number</TableHead>
+                    <TableHead className="whitespace-nowrap">Client Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Item Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Order Type</TableHead>
+                    <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                    <TableHead className="whitespace-nowrap">MRP</TableHead>
+                    {!isDesigner && <TableHead className="whitespace-nowrap">Rate</TableHead>}
+                    {!isDesigner && <TableHead className="whitespace-nowrap">Amount</TableHead>}
+                    <TableHead className="whitespace-nowrap">Quote Status</TableHead>
+                    <TableHead className="whitespace-nowrap">Order Status</TableHead>
+                    <TableHead className="whitespace-nowrap">Manufacturer</TableHead>
+                    {!isSalesExecutive && <TableHead className="whitespace-nowrap">Created Date</TableHead>}
+                    <TableHead className="whitespace-nowrap">Delivery Date</TableHead>
+                    {!isSalesExecutive && !isDesigner && <TableHead className="text-right whitespace-nowrap">Actions</TableHead>}
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -616,26 +616,27 @@ const OrderSheet = () => {
               <p className="text-muted-foreground mb-4">No orders found</p>
             </div>
           ) : (
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  {!isSalesExecutive && <TableHead>PO Number</TableHead>}
-                  <TableHead>Quote Number</TableHead>
-                  <TableHead>Client Name</TableHead>
-                  <TableHead>Item Name</TableHead>
-                  <TableHead>Order Type</TableHead>
-                  <TableHead>Quantity</TableHead>
-                  <TableHead>MRP</TableHead>
-                  {!isDesigner && <TableHead>Rate</TableHead>}
-                  {!isDesigner && <TableHead>Amount</TableHead>}
-                  <TableHead>Quote Status</TableHead>
-                  <TableHead>Order Status</TableHead>
-                  <TableHead>Manufacturer</TableHead>
-                  {!isSalesExecutive && <TableHead>Created Date</TableHead>}
-                  <TableHead>Delivery Date</TableHead>
-                  {!isSalesExecutive && !isDesigner && <TableHead className="text-right">Actions</TableHead>}
-                </TableRow>
-              </TableHeader>
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {!isSalesExecutive && <TableHead className="whitespace-nowrap">PO Number</TableHead>}
+                    <TableHead className="whitespace-nowrap">Quote Number</TableHead>
+                    <TableHead className="whitespace-nowrap">Client Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Item Name</TableHead>
+                    <TableHead className="whitespace-nowrap">Order Type</TableHead>
+                    <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                    <TableHead className="whitespace-nowrap">MRP</TableHead>
+                    {!isDesigner && <TableHead className="whitespace-nowrap">Rate</TableHead>}
+                    {!isDesigner && <TableHead className="whitespace-nowrap">Amount</TableHead>}
+                    <TableHead className="whitespace-nowrap">Quote Status</TableHead>
+                    <TableHead className="whitespace-nowrap">Order Status</TableHead>
+                    <TableHead className="whitespace-nowrap">Manufacturer</TableHead>
+                    {!isSalesExecutive && <TableHead className="whitespace-nowrap">Created Date</TableHead>}
+                    <TableHead className="whitespace-nowrap">Delivery Date</TableHead>
+                    {!isSalesExecutive && !isDesigner && <TableHead className="text-right whitespace-nowrap">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
               <TableBody>
                 {processedOrders.map((row) => (
                     <TableRow key={row._id}>
@@ -833,7 +834,8 @@ const OrderSheet = () => {
                 ))}
               </TableBody>
             </Table>
-          )}
+          </div>
+        )}
 
           {/* Pagination */}
           <Pagination

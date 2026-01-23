@@ -225,19 +225,33 @@ const PurchaseOrderDetail = () => {
       </div>
 
       {showPreview ? (
-        <PurchaseOrderPreview
-          formData={{
-            quoteNumber: order.quoteNumber || order.quote?.quoteNumber,
-            notes: order.notes,
-            hidePurchaseRate: order.hidePurchaseRate
-          }}
-          items={order.items}
-          manufacturer={order.manufacturer}
-          totals={{
-            subtotal: order.subtotal || 0,
-            total: order.totalAmount || 0
-          }}
-        />
+        <Card className="border-2 border-primary overflow-hidden shadow-xl">
+          <CardHeader className="bg-primary/5 py-4 border-b border-primary/10">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+              <Eye size={20} />
+              Purchase Order Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 bg-secondary/10">
+            <div className="w-full h-[850px] overflow-auto p-4 md:p-8 custom-scrollbar">
+              <div className="min-w-[1000px] max-w-[1000px] mx-auto bg-white shadow-[0_0_50px_-12px_rgba(0,0,0,0.3)] ring-1 ring-border rounded-sm">
+                <PurchaseOrderPreview
+                  formData={{
+                    quoteNumber: order.quoteNumber || order.quote?.quoteNumber,
+                    notes: order.notes,
+                    hidePurchaseRate: order.hidePurchaseRate
+                  }}
+                  items={order.items}
+                  manufacturer={order.manufacturer}
+                  totals={{
+                    subtotal: order.subtotal || 0,
+                    total: order.totalAmount || 0
+                  }}
+                />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           {/* Main Content - Left Side */}

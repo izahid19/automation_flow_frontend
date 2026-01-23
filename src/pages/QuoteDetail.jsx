@@ -770,14 +770,22 @@ const QuoteDetail = () => {
       />
 
       {/* Preview Panel - Hidden when not toggled */}
-      <div className={`card mt-6 border-2 border-primary ${showPreview ? '' : 'fixed left-[-9999px] top-0 w-[210mm]'}`}>
-        <div className="p-4 bg-primary/10 border-b border-border">
-          <h2 className="text-lg font-semibold flex items-center gap-2">
-            <Eye size={20} />
-            Quote Preview
-          </h2>
-        </div>
-        <QuotePreview quote={quote} isDraft={false} />
+      <div className={`mt-6 ${showPreview ? '' : 'fixed left-[-9999px] top-0 w-[210mm]'}`}>
+        <Card className="border-2 border-primary overflow-hidden shadow-xl">
+          <CardHeader className="bg-primary/5 py-4 border-b border-primary/10">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
+              <Eye size={20} />
+              Quote Preview
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 bg-secondary/10">
+            <div className="w-full h-[850px] overflow-auto p-4 md:p-8 custom-scrollbar">
+              <div className="min-w-[1000px] max-w-[1000px] mx-auto bg-white shadow-[0_0_50px_-12px_rgba(0,0,0,0.3)] ring-1 ring-border rounded-sm">
+                <QuotePreview quote={quote} isDraft={false} />
+              </div>
+            </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );

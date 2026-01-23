@@ -271,26 +271,32 @@ const QuoteForm = () => {
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-6 px-1">
         <div className="flex items-center gap-4">
-          <Button variant="outline" size="icon" onClick={() => navigate(-1)}>
-            <ArrowLeft size={20} />
+          <Button 
+            variant="ghost" 
+            size="icon" 
+            onClick={() => navigate(-1)}
+            className="rounded-full hover:bg-primary/10 transition-colors"
+          >
+            <ArrowLeft className="w-5 h-5" />
           </Button>
           <div>
-            <h1 className="text-2xl font-bold">
-              {isEditMode ? 'Edit Quote' : isRepeatMode ? 'Repeat Order' : 'Create New Quote'}
+            <h1 className="text-2xl md:text-3xl font-bold bg-linear-to-r from-foreground to-foreground/70 bg-clip-text">
+              {isEditMode ? 'Edit Quotation' : isRepeatMode ? 'Repeat Order' : 'New Quotation'}
             </h1>
-            <p className="text-muted-foreground">
-              {isEditMode ? 'Update the quote details' : isRepeatMode ? 'Create a new quote based on previous order' : 'Fill in the details to create a quotation'}
+            <p className="text-muted-foreground text-sm md:text-base">
+              {isEditMode ? 'Modify existing document details' : 'Create a professional quote for your client'}
             </p>
           </div>
         </div>
         <Button
           variant={showPreview ? "default" : "outline"}
           onClick={() => setShowPreview(!showPreview)}
+          className={`gap-2 h-11 px-6 shadow-sm transition-all ${showPreview ? 'bg-primary' : 'hover:border-primary/50'}`}
         >
-          {showPreview ? <EyeOff size={18} className="mr-2" /> : <Eye size={18} className="mr-2" />}
-          {showPreview ? 'Close Preview' : 'Preview Quote'}
+          {showPreview ? <EyeOff size={18} /> : <Eye size={18} />}
+          <span className="font-medium">{showPreview ? 'Close Preview' : 'Preview Live'}</span>
         </Button>
       </div>
 
@@ -307,9 +313,9 @@ const QuoteForm = () => {
 
             {/* Items */}
             <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0">
-                <CardTitle>Quote Items</CardTitle>
-                <Button variant="outline" size="sm" onClick={addItem}>
+              <CardHeader className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                <CardTitle className="text-xl font-semibold">Quote Items</CardTitle>
+                <Button variant="outline" size="sm" onClick={addItem} className="w-full sm:w-auto hover:bg-primary/10 hover:border-primary/50">
                   <Plus size={16} className="mr-2" /> Add Item
                 </Button>
               </CardHeader>
@@ -363,15 +369,19 @@ const QuoteForm = () => {
           </div>
         </div>
       ) : (
-        <Card className="border-2 border-primary/20">
-          <CardHeader className="bg-primary/5">
-            <CardTitle className="flex items-center gap-2">
+        <Card className="border-2 border-primary/20 overflow-hidden shadow-xl">
+          <CardHeader className="bg-primary/5 py-4 border-b border-primary/10">
+            <CardTitle className="text-lg font-semibold flex items-center gap-2 text-primary">
               <Eye size={20} />
               Draft Preview
             </CardTitle>
           </CardHeader>
-          <CardContent className="p-0">
-            <QuotePreview quote={{ ...formData, clientName: formData.partyName, items }} isDraft={true} />
+          <CardContent className="p-0 bg-secondary/10">
+            <div className="w-full h-[850px] overflow-auto p-4 md:p-8 custom-scrollbar">
+              <div className="min-w-[1000px] max-w-[1000px] mx-auto bg-white shadow-[0_0_50px_-12px_rgba(0,0,0,0.3)] ring-1 ring-border rounded-sm">
+                <QuotePreview quote={{ ...formData, clientName: formData.partyName, items }} isDraft={true} />
+              </div>
+            </div>
           </CardContent>
         </Card>
       )}

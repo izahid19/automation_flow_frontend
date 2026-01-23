@@ -511,18 +511,18 @@ const Reports = () => {
                 <Table>
                   <TableHeader>
                     <TableRow>
-                      <TableHead>Quote Number</TableHead>
-                      <TableHead>Client Name</TableHead>
-                      <TableHead>Sales Person</TableHead>
-                      <TableHead>Quote Item Names</TableHead>
-                      <TableHead>Order Type</TableHead>
-                      <TableHead>Quantity</TableHead>
-                      <TableHead>MRP</TableHead>
-                      <TableHead>Our Rate</TableHead>
-                      <TableHead>Amount</TableHead>
-                      <TableHead>Quote Status</TableHead>
-                      <TableHead>Date</TableHead>
-                      <TableHead className="text-right">Actions</TableHead>
+                      <TableHead className="whitespace-nowrap">Quote Number</TableHead>
+                      <TableHead className="whitespace-nowrap">Client Name</TableHead>
+                      <TableHead className="whitespace-nowrap">Sales Person</TableHead>
+                      <TableHead className="whitespace-nowrap">Quote Item Names</TableHead>
+                      <TableHead className="whitespace-nowrap">Order Type</TableHead>
+                      <TableHead className="whitespace-nowrap">Quantity</TableHead>
+                      <TableHead className="whitespace-nowrap">MRP</TableHead>
+                      <TableHead className="whitespace-nowrap">Our Rate</TableHead>
+                      <TableHead className="whitespace-nowrap">Amount</TableHead>
+                      <TableHead className="whitespace-nowrap">Quote Status</TableHead>
+                      <TableHead className="whitespace-nowrap">Date</TableHead>
+                      <TableHead className="text-right whitespace-nowrap">Actions</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

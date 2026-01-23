@@ -53,22 +53,22 @@ export const QuoteItemCard = ({
   };
 
   return (
-    <div className="p-5 border border-border/50 bg-card rounded-xl shadow-sm space-y-5 transition-all hover:border-border">
+    <div className="p-4 sm:p-6 border border-border/50 bg-card rounded-xl shadow-sm space-y-5 transition-all hover:border-border ring-1 ring-primary/5">
       {/* Item Header */}
-      <div className="flex items-center justify-between border-b border-border/40 pb-3">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-border/40 pb-4">
         <div className="flex items-center gap-3">
           <span className="flex items-center justify-center w-8 h-8 rounded-full bg-primary/10 text-primary font-bold text-sm">
             {index + 1}
           </span>
-          <span className="font-semibold text-white">Product Details</span>
+          <span className="font-semibold text-white uppercase tracking-wider text-xs">Product Details</span>
         </div>
-        <div className="flex items-center gap-1">
+        <div className="flex items-center gap-2">
           <Button
             type="button"
             variant="ghost"
             size="sm"
             onClick={() => onCopy(index)}
-            className="text-muted-foreground hover:text-foreground h-8 px-2"
+            className="text-muted-foreground hover:text-foreground h-9 px-3 bg-muted/20 sm:bg-transparent"
             title="Copy Item"
           >
             <Copy size={16} className="mr-2" />
@@ -80,7 +80,7 @@ export const QuoteItemCard = ({
               variant="ghost"
               size="sm"
               onClick={() => onRemove(index)}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-8 px-2"
+              className="text-destructive hover:text-destructive hover:bg-destructive/10 h-9 px-3 bg-muted/20 sm:bg-transparent"
               title="Remove Item"
             >
               <Trash2 size={16} />
