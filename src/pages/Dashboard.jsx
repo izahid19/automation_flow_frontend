@@ -182,13 +182,57 @@ const Dashboard = () => {
                   <p className="text-sm text-muted-foreground">{stat.title}</p>
                   <p className="text-2xl font-bold mt-1">{stat.value}</p>
                 </div>
-                <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.gradient} flex items-center justify-center`}>
+                <div className={`w-12 h-12 rounded-xl bg-linear-to-br ${stat.gradient} flex items-center justify-center`}>
                   <stat.icon className="w-6 h-6 text-white" />
                 </div>
               </div>
             </CardContent>
           </Card>
         ))}
+
+        {isAdmin && stats?.poStats && (
+          <>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">PO Pending</p>
+                    <p className="text-2xl font-bold mt-1">{stats.poStats.pending}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-orange-400 to-orange-600 flex items-center justify-center">
+                    <Clock className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">PO Created</p>
+                    <p className="text-2xl font-bold mt-1">{stats.poStats.created}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-blue-400 to-indigo-600 flex items-center justify-center">
+                    <Plus className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card className="hover:border-primary/50 transition-colors">
+              <CardContent className="p-5">
+                <div className="flex items-center justify-between">
+                  <div>
+                    <p className="text-sm text-muted-foreground">PO Completed</p>
+                    <p className="text-2xl font-bold mt-1">{stats.poStats.completed}</p>
+                  </div>
+                  <div className="w-12 h-12 rounded-xl bg-linear-to-br from-green-400 to-emerald-600 flex items-center justify-center">
+                    <CheckCircle2 className="w-6 h-6 text-white" />
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </>
+        )}
       </div>
 
       {/* Recent Quotes */}
@@ -219,8 +263,8 @@ const Dashboard = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>Quote #</TableHead>
-                  <TableHead>Client</TableHead>
+                  <TableHead>Quote Number</TableHead>
+                  <TableHead>Client Name</TableHead>
                   <TableHead>Quote Item Names</TableHead>
                   <TableHead>Order Type</TableHead>
                   <TableHead>Quantity</TableHead>

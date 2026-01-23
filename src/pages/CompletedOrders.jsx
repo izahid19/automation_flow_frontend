@@ -21,6 +21,8 @@ import {
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Label } from '@/components/ui/label';
 import toast from 'react-hot-toast';
+import { Skeleton } from '@/components/ui/skeleton';
+import { Pagination } from '@/components/shared';
 import axios from 'axios';
 import { API_URL } from '@/config';
 
@@ -34,7 +36,7 @@ const CompletedOrders = () => {
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
   const navigate = useNavigate();
   const { socket } = useSocket();
-  const { isDesigner } = useAuth();
+  const { isDesigner, loading: authLoading } = useAuth();
 
   const getDateRange = (filterType) => {
     const today = new Date();
@@ -119,7 +121,7 @@ const CompletedOrders = () => {
       const token = localStorage.getItem('token');
       const params = new URLSearchParams({
         page: pagination.page,
-        limit: 30,
+        limit: 10,
         onlyPOs: 'true',
         ...(search && { search }),
       });
@@ -206,6 +208,23 @@ const CompletedOrders = () => {
     return <Badge variant={s.variant} className={s.className}>{s.label}</Badge>;
   };
 
+  if (authLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <Card>
+          <CardContent className="h-64 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -318,9 +337,57 @@ const CompletedOrders = () => {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
-            </div>
+             <div className="overflow-x-auto">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>PO Number</TableHead>
+                      <TableHead>Quote Number</TableHead>
+                      <TableHead>Manufacturer</TableHead>
+                      <TableHead>Quote Item Name</TableHead>
+                      <TableHead>Order Type</TableHead>
+                      {!isDesigner && <TableHead>Amount</TableHead>}
+                      <TableHead>Order Status</TableHead>
+                      <TableHead>Created Date</TableHead>
+                      <TableHead>Delivery Date</TableHead>
+                      {!isDesigner && <TableHead className="text-right">Actions</TableHead>}
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {[...Array(10)].map((_, i) => (
+                      <TableRow key={i}>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                        <TableCell>
+                          <div className="space-y-1.5 py-1">
+                            <Skeleton className="h-4 w-32" />
+                            <Skeleton className="h-3 w-40" />
+                          </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                        <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                        {!isDesigner && <TableCell><Skeleton className="h-4 w-20" /></TableCell>}
+                        <TableCell><Skeleton className="h-6 w-28 rounded-full" /></TableCell>
+                        <TableCell>
+                          <div className="space-y-1 py-1">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-3 w-16" />
+                          </div>
+                        </TableCell>
+                        <TableCell><Skeleton className="h-5 w-24" /></TableCell>
+                        {!isDesigner && (
+                          <TableCell className="text-right">
+                            <div className="flex justify-end gap-1">
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                              <Skeleton className="h-9 w-9 rounded-md" />
+                            </div>
+                          </TableCell>
+                        )}
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+             </div>
           ) : orders.length === 0 ? (
             <div className="text-center py-12">
               <Package className="w-12 h-12 mx-auto text-muted-foreground mb-3" />
@@ -442,29 +509,13 @@ const CompletedOrders = () => {
           )}
 
           {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-center gap-2 p-4 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                disabled={pagination.page === 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pagination.page} of {pagination.pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                disabled={pagination.page === pagination.pages}
-              >
-                Next
-              </Button>
-            </div>
-          )}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total || 0}
+            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            itemsPerPage={10}
+          />
         </CardContent>
       </Card>
     </div>

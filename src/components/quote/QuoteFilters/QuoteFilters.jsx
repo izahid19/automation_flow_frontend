@@ -46,9 +46,27 @@ const StatusFilterChip = ({ value, label, active, onClick }) => (
  */
 export const QuoteFilters = ({
   selectedStatuses = ['all'],
-  onToggle,
+  onStatusChange,
   className = '',
 }) => {
+  const handleToggle = (value) => {
+    if (!onStatusChange) return;
+
+    let newStatuses;
+    if (value === 'all') {
+      newStatuses = ['all'];
+    } else {
+      const currentFiltered = selectedStatuses.filter(s => s !== 'all');
+      if (currentFiltered.includes(value)) {
+        newStatuses = currentFiltered.filter(s => s !== value);
+        if (newStatuses.length === 0) newStatuses = ['all'];
+      } else {
+        newStatuses = [...currentFiltered, value];
+      }
+    }
+    onStatusChange(newStatuses);
+  };
+
   return (
     <div className={`flex flex-wrap gap-2 ${className}`}>
       {QUOTE_STATUS_FILTERS.map((status) => (
@@ -57,7 +75,7 @@ export const QuoteFilters = ({
           value={status.value}
           label={status.label}
           active={selectedStatuses.includes(status.value)}
-          onClick={onToggle}
+          onClick={handleToggle}
         />
       ))}
     </div>

@@ -12,9 +12,11 @@ import {
   Loader2,
   X
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import toast from 'react-hot-toast';
 
 const Manufacturers = () => {
+  const { loading: authLoading } = useAuth();
   const [manufacturers, setManufacturers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -162,6 +164,37 @@ const Manufacturers = () => {
     setFormData({ ...formData, bccEmails: formData.bccEmails.filter(e => e !== emailToRemove) });
   };
 
+  if (authLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-8 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+          <Skeleton className="h-10 w-40 rounded-lg" />
+        </div>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[...Array(6)].map((_, i) => (
+            <Card key={i} className="p-6">
+              <div className="flex items-center gap-3">
+                <Skeleton className="w-10 h-10 rounded-lg" />
+                <div className="flex-1 space-y-2">
+                  <Skeleton className="h-4 w-3/4" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+              <div className="mt-6 pt-4 border-t border-border space-y-2">
+                <Skeleton className="h-3 w-2/3" />
+                <Skeleton className="h-3 w-1/2" />
+              </div>
+            </Card>
+          ))}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="space-y-6 animate-fade-in">
       {/* Header */}
@@ -198,9 +231,25 @@ const Manufacturers = () => {
       {/* List */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         {loading ? (
-          <div className="col-span-full flex justify-center py-12">
-            <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
-          </div>
+          <>
+            {[...Array(6)].map((_, i) => (
+              <div key={i} className="card">
+                <div className="flex items-start justify-between">
+                  <div className="flex items-center gap-3 w-full">
+                    <Skeleton className="w-10 h-10 rounded-lg" />
+                    <div className="flex-1 space-y-2">
+                      <Skeleton className="h-4 w-3/4" />
+                      <Skeleton className="h-3 w-1/2" />
+                    </div>
+                  </div>
+                </div>
+                <div className="mt-4 pt-4 border-t border-[var(--border)] space-y-2">
+                  <Skeleton className="h-3 w-1/3" />
+                  <Skeleton className="h-3 w-1/2" />
+                </div>
+              </div>
+            ))}
+          </>
         ) : manufacturers.length === 0 ? (
           <div className="col-span-full text-center py-12">
             <Factory className="w-12 h-12 mx-auto text-[var(--text-secondary)] mb-3" />

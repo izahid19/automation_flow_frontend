@@ -17,6 +17,7 @@ import {
   Mail,
   PanelLeftClose,
   PanelLeftOpen,
+  TrendingUp,
 } from 'lucide-react';
 import { useState } from 'react';
 
@@ -42,6 +43,7 @@ const Sidebar = ({ collapsed, setCollapsed }) => {
     { path: '/purchase-order-label', label: 'PO Label', icon: Tag, roles: ['admin'] },
     { path: '/quote-mail-settings', label: 'Quote Mail Settings', icon: Mail, roles: ['admin', 'manager'] },
     { path: '/po-mail-settings', label: 'PO Mail Settings', icon: Mail, roles: ['admin', 'manager'] },
+    { path: '/reports', label: 'Reports', icon: TrendingUp, roles: ['admin'] },
   ];
 
   const filteredNavItems = navItems.filter((item) => item.roles.includes(user?.role || ''));

@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { orderAPI } from '@/services/api';
+import { orderAPI, quoteAPI } from '@/services/api';
+import ConfirmDialog from '@/components/ui/ConfirmDialog';
 import { useAuth } from '@/context/AuthContext';
 import { useSocket } from '@/context/SocketContext';
 import { useDebounce } from '@/hooks/useDebounce';
@@ -29,8 +30,11 @@ import {
   CheckCircle,
   Calendar,
   X,
+  Trash2,
 } from 'lucide-react';
+import { Skeleton } from '@/components/ui/skeleton';
 import toast from 'react-hot-toast';
+import { Pagination } from '@/components/shared';
 
 // Simple cache for order sheet data
 const orderSheetCache = new Map();
@@ -45,9 +49,12 @@ const OrderSheet = () => {
   const [customDays, setCustomDays] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const navigate = useNavigate();
-  const { isAdmin, isManager, isSalesExecutive, isDesigner } = useAuth();
+  const { isAdmin, isManager, isSalesExecutive, isDesigner, loading: authLoading } = useAuth();
   const { socket } = useSocket();
   const abortControllerRef = useRef(null);
+  const [deleteId, setDeleteId] = useState(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteType, setDeleteType] = useState('po'); // 'po' or 'quote'
 
   // Debounce search to avoid excessive API calls
   const debouncedSearch = useDebounce(search, 400);
@@ -144,7 +151,7 @@ const OrderSheet = () => {
     }
     abortControllerRef.current = new AbortController();
 
-    const params = { page: pagination.page, limit: 30 };
+    const params = { page: pagination.page, limit: 10 };
     if (debouncedSearch) params.search = debouncedSearch;
     if (statusFilter.length > 0 && !statusFilter.includes('all')) {
       params.status = statusFilter.join(',');
@@ -278,6 +285,30 @@ const OrderSheet = () => {
     navigate(`/purchase-orders/new?quoteId=${row.quote._id}&itemIndex=${row.itemIndex}`);
   };
 
+  const handleDelete = async () => {
+    if (!deleteId) return;
+
+    try {
+      setIsDeleting(true);
+      if (deleteType === 'po') {
+        await orderAPI.delete(deleteId);
+        toast.success('Purchase order deleted successfully');
+      } else {
+        await quoteAPI.delete(deleteId);
+        toast.success('Quote deleted successfully');
+      }
+      
+      // Clear cache and refetch
+      orderSheetCache.clear();
+      fetchOrders(true);
+      setDeleteId(null);
+    } catch (error) {
+      toast.error(error.response?.data?.message || `Failed to delete ${deleteType === 'po' ? 'purchase order' : 'quote'}`);
+    } finally {
+      setIsDeleting(false);
+    }
+  };
+
   // Memoized status maps to avoid recreation on every render
   const quoteStatusMap = useMemo(() => ({
     draft: { label: 'Draft', variant: 'secondary', className: '' },
@@ -336,6 +367,24 @@ const OrderSheet = () => {
   }, [orders]);
 
 
+
+  if (authLoading) {
+    return (
+      <div className="space-y-6 animate-fade-in">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+          <div className="space-y-2">
+            <Skeleton className="h-10 w-48" />
+            <Skeleton className="h-4 w-64" />
+          </div>
+        </div>
+        <Card>
+          <CardContent className="h-64 flex items-center justify-center">
+            <Loader2 className="w-8 h-8 animate-spin text-primary" />
+          </CardContent>
+        </Card>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6 animate-fade-in">
@@ -430,7 +479,7 @@ const OrderSheet = () => {
                   }`}
                   onClick={() => toggleStatus('all')}
                 >
-                  {statusFilter.includes('all') && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
+                  {statusFilter.includes('all') && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-3" /></span>}
                   All Status
                 </Badge>
               </div>
@@ -458,7 +507,7 @@ const OrderSheet = () => {
                       }`}
                       onClick={() => toggleStatus(status.value)}
                     >
-                      {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
+                      {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-3" /></span>}
                       {status.label}
                     </Badge>
                   ))}
@@ -484,7 +533,7 @@ const OrderSheet = () => {
                       }`}
                       onClick={() => toggleStatus(status.value)}
                     >
-                      {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
+                      {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-3" /></span>}
                       {status.label}
                     </Badge>
                   ))}
@@ -498,8 +547,68 @@ const OrderSheet = () => {
       <Card>
         <CardContent className="p-0">
           {loading ? (
-            <div className="flex items-center justify-center py-12">
-              <Loader2 className="w-8 h-8 animate-spin text-primary" />
+            <div className="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow>
+                    {!isSalesExecutive && <TableHead>PO Number</TableHead>}
+                    <TableHead>Quote Number</TableHead>
+                    <TableHead>Client Name</TableHead>
+                    <TableHead>Item Name</TableHead>
+                    <TableHead>Order Type</TableHead>
+                    <TableHead>Quantity</TableHead>
+                    <TableHead>MRP</TableHead>
+                    {!isDesigner && <TableHead>Rate</TableHead>}
+                    {!isDesigner && <TableHead>Amount</TableHead>}
+                    <TableHead>Quote Status</TableHead>
+                    <TableHead>Order Status</TableHead>
+                    <TableHead>Manufacturer</TableHead>
+                    {!isSalesExecutive && <TableHead>Created Date</TableHead>}
+                    <TableHead>Delivery Date</TableHead>
+                    {!isSalesExecutive && !isDesigner && <TableHead className="text-right">Actions</TableHead>}
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  {[...Array(10)].map((_, i) => (
+                    <TableRow key={i} className="hover:bg-transparent">
+                      {!isSalesExecutive && <TableCell><Skeleton className="h-4 w-24" /></TableCell>}
+                      <TableCell><Skeleton className="h-4 w-24" /></TableCell>
+                      <TableCell>
+                        <div className="space-y-1.5 py-1">
+                          <Skeleton className="h-4 w-28" />
+                          <Skeleton className="h-3 w-36" />
+                        </div>
+                      </TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      <TableCell><Skeleton className="h-5 w-16 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-12" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-16" /></TableCell>
+                      {!isDesigner && <TableCell><Skeleton className="h-4 w-16" /></TableCell>}
+                      {!isDesigner && <TableCell><Skeleton className="h-5 w-20" /></TableCell>}
+                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-6 w-24 rounded-full" /></TableCell>
+                      <TableCell><Skeleton className="h-4 w-32" /></TableCell>
+                      {!isSalesExecutive && (
+                        <TableCell>
+                          <div className="space-y-1 py-1">
+                            <Skeleton className="h-4 w-20" />
+                            <Skeleton className="h-3 w-16" />
+                          </div>
+                        </TableCell>
+                      )}
+                      <TableCell><Skeleton className="h-4 w-24 px-1" /></TableCell>
+                      {!isSalesExecutive && !isDesigner && (
+                        <TableCell className="text-right">
+                          <div className="flex justify-end gap-1">
+                            <Skeleton className="h-9 w-20 rounded-md" />
+                            <Skeleton className="h-9 w-9 rounded-md" />
+                          </div>
+                        </TableCell>
+                      )}
+                    </TableRow>
+                  ))}
+                </TableBody>
+              </Table>
             </div>
           ) : processedOrders.length === 0 ? (
             <div className="text-center py-12">
@@ -642,19 +751,6 @@ const OrderSheet = () => {
                       {!isSalesExecutive && !isDesigner && (
                       <TableCell>
                           <div className="flex items-center justify-end gap-1">
-                            <Button
-                              variant="ghost"
-                              size="icon"
-                              onClick={() => {
-                                if (row.isPendingQuote) {
-                                  navigate(`/quotes/${row.quote?._id}`);
-                                } else {
-                                  navigate(`/purchase-orders/${row.purchaseOrder?._id}`);
-                                }
-                              }}
-                            >
-                              <Eye size={16} />
-                            </Button>
                             {(isAdmin || isManager) && (
                               row.purchaseOrder ? (
                                 row.orderStatus === 'po_completed' ? (
@@ -690,6 +786,19 @@ const OrderSheet = () => {
                                 </Button>
                               )
                             )}
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              onClick={() => {
+                                if (row.isPendingQuote) {
+                                  navigate(`/quotes/${row.quote?._id}`);
+                                } else {
+                                  navigate(`/purchase-orders/${row.purchaseOrder?._id}`);
+                                }
+                              }}
+                            >
+                              <Eye size={16} />
+                            </Button>
                             {!row.isPendingQuote && row.pdfUrl && (
                               <Button
                                 variant="ghost"
@@ -697,6 +806,24 @@ const OrderSheet = () => {
                                 onClick={() => handleDownloadPDF(row.purchaseOrder?._id, row.poNumber)}
                               >
                                 <Download size={16} />
+                              </Button>
+                            )}
+                            {isAdmin && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="text-red-500 hover:text-red-700 hover:bg-red-500/10"
+                                onClick={() => {
+                                  if (row.purchaseOrder) {
+                                    setDeleteId(row.purchaseOrder._id);
+                                    setDeleteType('po');
+                                  } else {
+                                    setDeleteId(row.quote?._id);
+                                    setDeleteType('quote');
+                                  }
+                                }}
+                              >
+                                <Trash2 size={16} />
                               </Button>
                             )}
                           </div>
@@ -709,31 +836,26 @@ const OrderSheet = () => {
           )}
 
           {/* Pagination */}
-          {pagination.pages > 1 && (
-            <div className="flex items-center justify-center gap-2 p-4 border-t">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPagination({ ...pagination, page: pagination.page - 1 })}
-                disabled={pagination.page === 1}
-              >
-                Previous
-              </Button>
-              <span className="text-sm text-muted-foreground">
-                Page {pagination.page} of {pagination.pages}
-              </span>
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setPagination({ ...pagination, page: pagination.page + 1 })}
-                disabled={pagination.page === pagination.pages}
-              >
-                Next
-              </Button>
-            </div>
-          )}
+          <Pagination
+            currentPage={pagination.page}
+            totalPages={pagination.pages}
+            totalItems={pagination.total}
+            onPageChange={(page) => setPagination(prev => ({ ...prev, page }))}
+            itemsPerPage={10}
+          />
         </CardContent>
       </Card>
+
+      <ConfirmDialog
+        isOpen={!!deleteId}
+        onClose={() => setDeleteId(null)}
+        onConfirm={handleDelete}
+        title={`Delete ${deleteType === 'po' ? 'Purchase Order' : 'Quote'}`}
+        message={`Are you sure you want to delete this ${deleteType === 'po' ? 'purchase order' : 'quote'}? This action cannot be undone.`}
+        confirmText="Delete"
+        loading={isDeleting}
+        variant="destructive"
+      />
     </div>
   );
 };
