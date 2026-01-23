@@ -8,7 +8,6 @@ import AppLayout from './components/layout/AppLayout';
 
 // Pages
 import Login from './pages/auth/Login';
-import Register from './pages/auth/Register';
 import Dashboard from './pages/Dashboard';
 import Quotes from './pages/Quotes';
 import QuoteForm from './pages/QuoteForm';
@@ -105,14 +104,7 @@ function App() {
               </PublicRoute>
             }
           />
-          <Route
-            path="/register"
-            element={
-              <PublicRoute>
-                <Register />
-              </PublicRoute>
-            }
-          />
+
 
           {/* Protected Routes */}
           <Route

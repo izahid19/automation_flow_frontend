@@ -99,14 +99,6 @@ const Login = () => {
               </Button>
             </form>
           </CardContent>
-          <CardFooter className="flex justify-center border-t pt-6">
-            <p className="text-sm text-muted-foreground">
-              Don't have an account?{' '}
-              <Link to="/register" className="text-primary hover:underline font-medium">
-                Sign Up
-              </Link>
-            </p>
-          </CardFooter>
         </Card>
       </div>
     </div>

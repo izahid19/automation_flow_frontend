@@ -52,7 +52,7 @@ const Users = () => {
         await authAPI.updateUser(editingId, updateData);
         toast.success('User updated');
       } else {
-        await authAPI.register(formData);
+        await authAPI.createUser(formData);
         toast.success('User created');
       }
       setShowModal(false);

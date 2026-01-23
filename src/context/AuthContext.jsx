@@ -34,14 +34,7 @@ export const AuthProvider = ({ children }) => {
     return user;
   };
 
-  const register = async (data) => {
-    const response = await authAPI.register(data);
-    const { user, token } = response.data.data;
-    localStorage.setItem('token', token);
-    localStorage.setItem('user', JSON.stringify(user));
-    setUser(user);
-    return user;
-  };
+
 
   const logout = () => {
     localStorage.removeItem('token');
@@ -53,7 +46,6 @@ export const AuthProvider = ({ children }) => {
     user,
     loading,
     login,
-    register,
     logout,
     isAuthenticated: !!user,
     isAdmin: user?.role === 'admin',
