@@ -74,17 +74,33 @@ const Reports = () => {
         const yesterday = new Date(today);
         yesterday.setDate(yesterday.getDate() - 1);
         yesterday.setHours(0, 0, 0, 0);
-        return { from: yesterday.toISOString().split('T')[0], to: yesterday.toISOString().split('T')[0] };
+        const yesterdayEnd = new Date(yesterday);
+        yesterdayEnd.setHours(23, 59, 59, 999);
+        return { from: yesterday.toISOString().split('T')[0], to: yesterdayEnd.toISOString().split('T')[0] };
+      
       case 'last_week':
         const weekAgo = new Date(today);
         weekAgo.setDate(weekAgo.getDate() - 7);
         weekAgo.setHours(0, 0, 0, 0);
         return { from: weekAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+      
       case 'last_month':
-        const monthAgo = new Date(today);
-        monthAgo.setMonth(monthAgo.getMonth() - 1);
-        monthAgo.setHours(0, 0, 0, 0);
-        return { from: monthAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
+        const currentMonth = new Date(today);
+        currentMonth.setDate(1);
+        currentMonth.setHours(0, 0, 0, 0);
+        
+        const lastMonthStart = new Date(currentMonth);
+        lastMonthStart.setMonth(lastMonthStart.getMonth() - 1);
+        
+        const lastMonthEnd = new Date(currentMonth);
+        lastMonthEnd.setDate(0);
+        lastMonthEnd.setHours(23, 59, 59, 999);
+        
+        return { 
+          from: lastMonthStart.toISOString().split('T')[0], 
+          to: lastMonthEnd.toISOString().split('T')[0] 
+        };
+      
       case 'custom':
         if (customDays && parseInt(customDays) > 0) {
           const daysAgo = new Date(today);
@@ -93,6 +109,7 @@ const Reports = () => {
           return { from: daysAgo.toISOString().split('T')[0], to: today.toISOString().split('T')[0] };
         }
         return null;
+      
       default:
         return null;
     }
