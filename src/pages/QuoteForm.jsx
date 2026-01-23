@@ -94,6 +94,29 @@ const QuoteForm = () => {
     invoiceLabel: 'QUOTATION'
   });
 
+  const [initialFormData, setInitialFormData] = useState(null);
+
+  // Helper to check for deep equality
+  const isDeepEqual = (obj1, obj2) => {
+    // Use loose equality for primitives to handle string/number differences (e.g. "5" vs 5)
+    if (obj1 == obj2) return true;
+    
+    if (typeof obj1 !== 'object' || obj1 === null || typeof obj2 !== 'object' || obj2 === null) return false;
+    
+    const keys1 = Object.keys(obj1);
+    const keys2 = Object.keys(obj2);
+    
+    if (keys1.length !== keys2.length) return false;
+    
+    for (let key of keys1) {
+      if (!keys2.includes(key) || !isDeepEqual(obj1[key], obj2[key])) return false;
+    }
+    
+    return true;
+  };
+
+  const hasChanges = isEditMode && initialFormData ? !isDeepEqual(formData, initialFormData) : true;
+
   // Fetch quote data if in edit mode
   useEffect(() => {
     const fetchQuote = async () => {
@@ -105,7 +128,7 @@ const QuoteForm = () => {
         const quote = response.data.data;
         
         // Map quote data to form data structure
-        setFormData({
+        const mappedData = {
           partyName: quote.clientName || '',
           marketedBy: quote.marketedBy || '',
           clientEmail: quote.clientEmail || '',
@@ -120,7 +143,11 @@ const QuoteForm = () => {
           inventoryCharges: quote.inventoryCharges || 0,
           terms: quote.terms || 'Payment due within 30 days. All prices in INR.',
           bankDetails: quote.bankDetails || '',
-        });
+        };
+
+        setFormData(mappedData);
+        // Deep copy to prevent reference sharing with mutable formData state
+        setInitialFormData(JSON.parse(JSON.stringify(mappedData)));
       } catch (error) {
         toast.error('Failed to load quote');
         navigate('/quotes');
@@ -444,12 +471,20 @@ const QuoteForm = () => {
       
       if (isEditMode) {
         // Update existing quote
-        await quoteAPI.update(id, submitData);
+        const response = await quoteAPI.update(id, submitData);
+        const updatedQuote = response.data.data;
         toast.success('Quote updated successfully!');
         
         if (submitForApproval) {
-          await quoteAPI.submit(quoteId);
-          toast.success('Quote submitted for approval!');
+          // If the quote is in draft status (either was draft or reset to draft by update),
+          // call the resubmit API as requested.
+          if (updatedQuote.status === 'draft') {
+            await quoteAPI.resubmit(quoteId);
+            toast.success('Quote resubmitted for approval!');
+          } else {
+            // Should not happen with reverted update logic, but safe fallback
+            toast.success('Quote updated and resubmitted for approval!');
+          }
         }
       } else {
         // Create new quote
@@ -477,7 +512,7 @@ const QuoteForm = () => {
   if (loadingQuote) {
     return (
       <div className="flex items-center justify-center h-96">
-        <Loader2 className="w-8 h-8 animate-spin text-[var(--primary)]" />
+        <Loader2 className="w-8 h-8 animate-spin text-primary" />
       </div>
     );
   }
@@ -1315,7 +1350,7 @@ const QuoteForm = () => {
                   variant="outline"
                   className="w-full"
                   onClick={() => handleSubmit(false)}
-                  disabled={loading}
+                  disabled={loading || !hasChanges}
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Save size={16} className="mr-2" />}
                   Save as Draft
@@ -1323,10 +1358,10 @@ const QuoteForm = () => {
                 <Button
                   className="w-full"
                   onClick={() => handleSubmit(true)}
-                  disabled={loading}
+                  disabled={loading || !hasChanges}
                 >
                   {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : <Send size={16} className="mr-2" />}
-                  Submit for Approval
+                  {isEditMode ? 'Submit Updated Approval' : 'Submit for Approval'}
                 </Button>
               </div>
             </CardContent>

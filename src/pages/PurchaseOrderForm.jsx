@@ -474,6 +474,30 @@ const PurchaseOrderForm = () => {
                          <span>{selectedManufacturer.address}</span>
                       </div>
                     )}
+                    {selectedManufacturer.ccEmails && selectedManufacturer.ccEmails.length > 0 && (
+                      <div className="text-muted-foreground flex items-center gap-2 flex-wrap mt-1">
+                        <span className="font-medium">CC:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedManufacturer.ccEmails.map((email, idx) => (
+                            <span key={idx} className="bg-primary/10 text-primary px-2 py-0.5 rounded text-sm border border-primary/20">
+                              {email}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {selectedManufacturer.bccEmails && selectedManufacturer.bccEmails.length > 0 && (
+                      <div className="text-muted-foreground flex items-center gap-2 flex-wrap mt-1">
+                        <span className="font-medium">BCC:</span>
+                        <div className="flex flex-wrap gap-1">
+                          {selectedManufacturer.bccEmails.map((email, idx) => (
+                            <span key={idx} className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-sm border border-blue-500/20">
+                              {email}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 </div>
               )}

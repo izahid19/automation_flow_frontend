@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useSocket } from '@/context/SocketContext';
+import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -33,6 +34,7 @@ const CompletedOrders = () => {
   const [pagination, setPagination] = useState({ page: 1, pages: 1 });
   const navigate = useNavigate();
   const { socket } = useSocket();
+  const { isDesigner } = useAuth();
 
   const getDateRange = (filterType) => {
     const today = new Date();
@@ -333,11 +335,11 @@ const CompletedOrders = () => {
                   <TableHead>Manufacturer</TableHead>
                   <TableHead>Quote Item Name</TableHead>
                   <TableHead>Order Type</TableHead>
-                  <TableHead>Amount</TableHead>
+                  {!isDesigner && <TableHead>Amount</TableHead>}
                   <TableHead>Order Status</TableHead>
                   <TableHead>Created Date</TableHead>
                   <TableHead>Delivery Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {!isDesigner && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -392,7 +394,7 @@ const CompletedOrders = () => {
                          </span>
                       )}
                     </TableCell>
-                    <TableCell className="font-semibold">₹{order.totalAmount?.toFixed(2) || '0.00'}</TableCell>
+                    {!isDesigner && <TableCell className="font-semibold">₹{order.totalAmount?.toFixed(2) || '0.00'}</TableCell>}
                     <TableCell>{getStatusBadge(order.status)}</TableCell>
                     <TableCell className="text-muted-foreground">
                       {new Date(order.createdAt).toLocaleDateString('en-GB', { day: '2-digit', month: '2-digit', year: 'numeric' })} {new Date(order.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
@@ -409,6 +411,7 @@ const CompletedOrders = () => {
                         );
                       })()}
                     </TableCell>
+                    {!isDesigner && (
                     <TableCell>
                       <div className="flex items-center justify-end gap-1">
                         <Button
@@ -431,6 +434,7 @@ const CompletedOrders = () => {
                         )}
                       </div>
                     </TableCell>
+                    )}
                   </TableRow>
                 ))}
               </TableBody>

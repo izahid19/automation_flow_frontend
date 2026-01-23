@@ -240,6 +240,7 @@ const Quotes = () => {
 
     // All quote-related events
     socket.on('quote:created', handleQuoteUpdate);
+    socket.on('quote:updated', handleQuoteUpdate);
     socket.on('quote:submitted', handleQuoteUpdate);
     socket.on('quote:approved', handleQuoteUpdate);
     socket.on('quote:rejected', handleQuoteUpdate);
@@ -252,6 +253,7 @@ const Quotes = () => {
 
     return () => {
       socket.off('quote:created', handleQuoteUpdate);
+      socket.off('quote:updated', handleQuoteUpdate);
       socket.off('quote:submitted', handleQuoteUpdate);
       socket.off('quote:approved', handleQuoteUpdate);
       socket.off('quote:rejected', handleQuoteUpdate);
@@ -437,7 +439,7 @@ const Quotes = () => {
                   }`}
                   onClick={() => toggleStatus(status.value)}
                 >
-                  {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-[3]" /></span>}
+                  {statusFilter.includes(status.value) && <span className="w-5 h-5 mr-1.5 rounded-full bg-green-500 flex items-center justify-center"><Check className="w-3.5 h-3.5 text-white stroke-3" /></span>}
                   {status.label}
                 </Badge>
               ))}
@@ -576,7 +578,7 @@ const Quotes = () => {
                         >
                           <Eye size={16} />
                         </Button>
-                        {(quote.status === 'draft' || quote.status === 'rejected' || isAdmin) && (
+                        {(quote.status === 'draft' || quote.status === 'quote_rejected' || isAdmin || (isSalesExecutive && quote.status !== 'completed_quote')) && (
                           <Button
                             variant="ghost"
                             size="icon"

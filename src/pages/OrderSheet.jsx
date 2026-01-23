@@ -45,7 +45,7 @@ const OrderSheet = () => {
   const [customDays, setCustomDays] = useState('');
   const [pagination, setPagination] = useState({ page: 1, pages: 1, total: 0 });
   const navigate = useNavigate();
-  const { isAdmin, isManager } = useAuth();
+  const { isAdmin, isManager, isSalesExecutive, isDesigner } = useAuth();
   const { socket } = useSocket();
   const abortControllerRef = useRef(null);
 
@@ -235,6 +235,7 @@ const OrderSheet = () => {
     };
 
     // Quote events that affect order sheet
+    socket.on('quote:updated', handleUpdate);
     socket.on('quote:design-updated', handleUpdate);
     socket.on('quote:advance-payment-received', handleUpdate);
     socket.on('quote:completed', handleUpdate);
@@ -246,6 +247,7 @@ const OrderSheet = () => {
     socket.on('po:payment-verified', handleUpdate);
 
     return () => {
+      socket.off('quote:updated', handleUpdate);
       socket.off('quote:design-updated', handleUpdate);
       socket.off('quote:advance-payment-received', handleUpdate);
       socket.off('quote:completed', handleUpdate);
@@ -388,7 +390,7 @@ const OrderSheet = () => {
                   }}
                   placeholder="e.g. 45"
                   className="w-20"
-                />
+                  />
                 <Label className="text-sm">Days</Label>
               </div>
             )}
@@ -508,7 +510,7 @@ const OrderSheet = () => {
             <Table>
               <TableHeader>
                 <TableRow>
-                  <TableHead>PO Number</TableHead>
+                  {!isSalesExecutive && <TableHead>PO Number</TableHead>}
                   <TableHead>Quote Number</TableHead>
                   <TableHead>Client Name</TableHead>
                   <TableHead>Item Name</TableHead>
@@ -520,26 +522,28 @@ const OrderSheet = () => {
                   <TableHead>Quote Status</TableHead>
                   <TableHead>Order Status</TableHead>
                   <TableHead>Manufacturer</TableHead>
-                  <TableHead>Created Date</TableHead>
+                  {!isSalesExecutive && <TableHead>Created Date</TableHead>}
                   <TableHead>Delivery Date</TableHead>
-                  <TableHead className="text-right">Actions</TableHead>
+                  {!isSalesExecutive && !isDesigner && <TableHead className="text-right">Actions</TableHead>}
                 </TableRow>
               </TableHeader>
               <TableBody>
                 {processedOrders.map((row) => (
                     <TableRow key={row._id}>
-                      <TableCell>
-                        {row.purchaseOrder ? (
-                          <span 
-                            className="text-green-500 font-medium hover:underline cursor-pointer"
-                            onClick={() => navigate(`/purchase-orders/${row.purchaseOrder._id}`)}
-                          >
-                            {row.poNumber}
-                          </span>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
+                      {!isSalesExecutive && (
+                        <TableCell>
+                          {row.purchaseOrder ? (
+                            <span 
+                              className="text-green-500 font-medium hover:underline cursor-pointer"
+                              onClick={() => navigate(`/purchase-orders/${row.purchaseOrder._id}`)}
+                            >
+                              {row.poNumber}
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         <span 
                           className="text-orange-500 hover:underline cursor-pointer"
@@ -601,20 +605,22 @@ const OrderSheet = () => {
                           {row.manufacturer?.name || 'Not Assigned'}
                         </span>
                       </TableCell>
-                      <TableCell>
-                        {row.purchaseOrder ? (
-                          <div className="flex flex-col">
-                            <span className="font-medium text-muted-foreground">
-                              {new Date(row.purchaseOrder.createdAt).toLocaleDateString('en-GB')}
-                            </span>
-                            <span className="text-xs text-muted-foreground">
-                              {new Date(row.purchaseOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                            </span>
-                          </div>
-                        ) : (
-                          <span className="text-muted-foreground">-</span>
-                        )}
-                      </TableCell>
+                      {!isSalesExecutive && (
+                        <TableCell>
+                          {row.purchaseOrder ? (
+                            <div className="flex flex-col">
+                              <span className="font-medium text-muted-foreground">
+                                {new Date(row.purchaseOrder.createdAt).toLocaleDateString('en-GB')}
+                              </span>
+                              <span className="text-xs text-muted-foreground">
+                                {new Date(row.purchaseOrder.createdAt).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                              </span>
+                            </div>
+                          ) : (
+                            <span className="text-muted-foreground">-</span>
+                          )}
+                        </TableCell>
+                      )}
                       <TableCell>
                         {row.purchaseOrder ? (() => {
                           const createdDate = new Date(row.purchaseOrder.createdAt || row.createdAt);
@@ -629,6 +635,7 @@ const OrderSheet = () => {
                           <span className="text-muted-foreground">-</span>
                         )}
                       </TableCell>
+                      {!isSalesExecutive && !isDesigner && (
                       <TableCell>
                           <div className="flex items-center justify-end gap-1">
                             <Button
@@ -690,6 +697,7 @@ const OrderSheet = () => {
                             )}
                           </div>
                       </TableCell>
+                      )}
                     </TableRow>
                 ))}
               </TableBody>

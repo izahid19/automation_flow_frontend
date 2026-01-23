@@ -53,6 +53,7 @@ export const quoteAPI = {
   update: (id, data) => api.put(`/quotes/${id}`, data),
   delete: (id) => api.delete(`/quotes/${id}`),
   submit: (id) => api.post(`/quotes/${id}/submit`),
+  resubmit: (id) => api.post(`/quotes/${id}/resubmit`),
   approveSE: (id, data) => api.post(`/quotes/${id}/approve-se`, data),
   rejectSE: (id, data) => api.post(`/quotes/${id}/reject-se`, data),
   approveManager: (id, data) => api.post(`/quotes/${id}/approve-manager`, data),

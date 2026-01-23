@@ -14,8 +14,8 @@ export const PACKAGING_OPTIONS = {
   'Tablet': ['Alu Alu', 'Blister', 'Aluminium'],
   'Capsule': ['Alu Alu', 'Blister', 'Aluminium'],
   'Soft Gelatine': ['Alu Alu', 'Blister', 'Aluminium'],
-  'Syrup/Suspension': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
-  'Dry Syrup': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label'],
+  'Syrup/Suspension': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label', 'Gum label'],
+  'Dry Syrup': ['Only label', 'Sticker label', 'Metallic label', 'Vinyl label', 'Gum label'],
   'Ointment/Cream': ['With carton', 'With metalic carton', 'With flap'],
   'Sachet': ['With carton'],
 };

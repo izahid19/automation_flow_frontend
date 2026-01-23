@@ -31,7 +31,11 @@ const Manufacturers = () => {
     state: '',
     contactPerson: '',
     category: '',
+    ccEmails: [],
+    bccEmails: [],
   });
+  const [ccInput, setCcInput] = useState('');
+  const [bccInput, setBccInput] = useState('');
 
   useEffect(() => {
     fetchManufacturers();
@@ -76,7 +80,11 @@ const Manufacturers = () => {
       state: manufacturer.state || '',
       contactPerson: manufacturer.contactPerson || '',
       category: manufacturer.category || '',
+      ccEmails: manufacturer.ccEmails || [],
+      bccEmails: manufacturer.bccEmails || [],
     });
+    setCcInput('');
+    setBccInput('');
     setEditingId(manufacturer._id);
     setShowModal(true);
   };
@@ -109,8 +117,49 @@ const Manufacturers = () => {
       state: '',
       contactPerson: '',
       category: '',
+      ccEmails: [],
+      bccEmails: [],
     });
+    setCcInput('');
+    setBccInput('');
     setEditingId(null);
+  };
+
+  // Email validation helper
+  const isValidEmail = (email) => {
+    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+  };
+
+  // Add CC email
+  const addCcEmail = () => {
+    const email = ccInput.trim();
+    if (email && isValidEmail(email) && !formData.ccEmails.includes(email)) {
+      setFormData({ ...formData, ccEmails: [...formData.ccEmails, email] });
+      setCcInput('');
+    } else if (email && !isValidEmail(email)) {
+      toast.error('Please enter a valid email');
+    }
+  };
+
+  // Remove CC email
+  const removeCcEmail = (emailToRemove) => {
+    setFormData({ ...formData, ccEmails: formData.ccEmails.filter(e => e !== emailToRemove) });
+  };
+
+  // Add BCC email
+  const addBccEmail = () => {
+    const email = bccInput.trim();
+    if (email && isValidEmail(email) && !formData.bccEmails.includes(email)) {
+      setFormData({ ...formData, bccEmails: [...formData.bccEmails, email] });
+      setBccInput('');
+    } else if (email && !isValidEmail(email)) {
+      toast.error('Please enter a valid email');
+    }
+  };
+
+  // Remove BCC email
+  const removeBccEmail = (emailToRemove) => {
+    setFormData({ ...formData, bccEmails: formData.bccEmails.filter(e => e !== emailToRemove) });
   };
 
   return (
@@ -276,6 +325,65 @@ const Manufacturers = () => {
                   />
                 </div>
               </div>
+
+              {/* CC Emails Section */}
+              <div className="pt-4 border-t border-[var(--border)]">
+                <label className="block text-sm font-medium mb-2">CC Emails (for PO)</label>
+                <p className="text-xs text-muted-foreground mb-2">These email addresses will be CC'd when sending Purchase Orders</p>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="email"
+                    value={ccInput}
+                    onChange={(e) => setCcInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addCcEmail())}
+                    placeholder="Enter email and press Enter or click Add"
+                    className="input flex-1"
+                  />
+                  <button type="button" onClick={addCcEmail} className="btn btn-secondary px-4">Add</button>
+                </div>
+                {formData.ccEmails.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.ccEmails.map((email, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-[var(--primary)]/20 text-[var(--primary)] border border-[var(--primary)]/30">
+                        {email}
+                        <button type="button" onClick={() => removeCcEmail(email)} className="hover:text-red-400 ml-1">
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* BCC Emails Section */}
+              <div className="pt-4 border-t border-[var(--border)]">
+                <label className="block text-sm font-medium mb-2">BCC Emails (for PO)</label>
+                <p className="text-xs text-muted-foreground mb-2">These email addresses will be BCC'd when sending Purchase Orders</p>
+                <div className="flex gap-2 mb-2">
+                  <input
+                    type="email"
+                    value={bccInput}
+                    onChange={(e) => setBccInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), addBccEmail())}
+                    placeholder="Enter email and press Enter or click Add"
+                    className="input flex-1"
+                  />
+                  <button type="button" onClick={addBccEmail} className="btn btn-secondary px-4">Add</button>
+                </div>
+                {formData.bccEmails.length > 0 && (
+                  <div className="flex flex-wrap gap-2">
+                    {formData.bccEmails.map((email, idx) => (
+                      <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 rounded-full text-sm bg-blue-500/20 text-blue-400 border border-blue-500/30">
+                        {email}
+                        <button type="button" onClick={() => removeBccEmail(email)} className="hover:text-red-400 ml-1">
+                          <X size={12} />
+                        </button>
+                      </span>
+                    ))}
+                  </div>
+                )}
+              </div>
+
               <div className="flex gap-3 pt-4">
                 <button type="button" onClick={() => setShowModal(false)} className="btn btn-secondary flex-1">
                   Cancel

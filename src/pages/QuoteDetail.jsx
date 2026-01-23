@@ -105,6 +105,7 @@ const QuoteDetail = () => {
       }
     };
 
+    socket.on('quote:updated', handleQuoteUpdate);
     socket.on('quote:approved', handleQuoteUpdate);
     socket.on('quote:rejected', handleQuoteUpdate);
     socket.on('quote:design-updated', handleQuoteUpdate);
@@ -115,6 +116,7 @@ const QuoteDetail = () => {
     socket.on('quote:client-design-approved', handleQuoteUpdate);
 
     return () => {
+      socket.off('quote:updated', handleQuoteUpdate);
       socket.off('quote:approved', handleQuoteUpdate);
       socket.off('quote:rejected', handleQuoteUpdate);
       socket.off('quote:design-updated', handleQuoteUpdate);
@@ -331,7 +333,8 @@ const QuoteDetail = () => {
   const canUpdateClientOrderStatus = (isAdmin || isSalesExecutive) && quote.status === 'manager_approved' && quote.clientOrderStatus === 'pending';
   const canConfirmAdvancePayment = (isAdmin || isAccountant || isManager) && quote.status === 'pending_accountant';
   const canUpdateDesign = (isAdmin || isDesigner || isManager) && quote.status === 'pending_designer';
-  const canSubmit = quote.status === 'draft' || quote.status === 'manager_rejected';
+  const canEdit = quote.status === 'draft' || quote.status === 'manager_rejected' || quote.status === 'quote_rejected' || (isSalesExecutive && quote.status !== 'completed_quote');
+  const canSubmit = quote.status === 'draft' || quote.status === 'manager_rejected' || quote.status === 'quote_rejected';
   const canResendEmail = (isAdmin || isManager) && quote.status !== 'draft' && quote.status !== 'manager_rejected' && quote.status !== 'pending_manager_approval' && quote.clientEmail;
 
   return (
@@ -353,7 +356,7 @@ const QuoteDetail = () => {
           </div>
         </div>
         <div className="flex gap-2">
-          {canSubmit && (
+          {canEdit && (
             <button 
               onClick={() => navigate(`/quotes/${id}/edit`)} 
               className="btn btn-secondary"
@@ -1037,7 +1040,66 @@ const QuoteDetail = () => {
           {/* Approval History */}
           <div className="card">
             <h2 className="text-lg font-semibold mb-4">Approval History</h2>
-            <div className="space-y-3">
+            <div className="space-y-6">
+              {quote.history && quote.history.length > 0 ? (
+                quote.history.slice().map((item, index) => (
+                  <div key={index} className="flex gap-3 relative">
+                    {index !== quote.history.length - 1 && (
+                      <div className="absolute left-4 top-8 bottom-[-24px] w-0.5 bg-border" />
+                    )}
+                    
+                    <div className="flex flex-col items-center z-10">
+                      <div className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                        item.action.includes('rejected') ? 'bg-red-500' :
+                        item.action.includes('edited') ? 'bg-orange-500' :
+                        item.action === 'created' ? 'bg-blue-500' :
+                        'bg-green-500'
+                      }`}>
+                        {item.action.includes('rejected') ? <X size={16} className="text-white" /> :
+                         item.action.includes('edited') ? <Edit size={16} className="text-white" /> :
+                         <Check size={16} className="text-white" />}
+                      </div>
+                    </div>
+                    <div className="flex-1 pb-1">
+                      <p className="font-medium">
+                        {item.action === 'created' ? 'Quote Created' :
+                         item.action === 'edited' ? 'Quote Edited' :
+                         item.action === 'submitted' ? 'Quote Submitted' :
+                         item.action === 'resubmitted' ? 'Quote Resubmitted' :
+                         item.action === 'edited_and_resubmitted' ? 'Quote Edited & Resubmitted' :
+                         item.action === 'se_approved' ? 'Sales Executive Approved' :
+                         item.action === 'se_rejected' ? 'Sales Executive Rejected' :
+                         item.action === 'manager_approved' ? 'Manager Approved' :
+                         item.action === 'manager_rejected' ? 'Manager Rejected' :
+                         item.action === 'md_approved' ? 'MD Approved' :
+                         item.action === 'md_rejected' ? 'MD Rejected' :
+                         item.action === 'client_order_approved' ? 'Client Order Confirmed' :
+                         item.action === 'payment_verified' ? 'Payment Verified' :
+                         item.action === 'design_quote_approved' ? 'Design Approved' :
+                         item.action === 'client_design_approved' ? 'Client Approved Design' :
+                         item.action === 'manufacturer_design_approved' ? 'Manufacturer Approved Design' :
+                         item.action.replace(/_/g, ' ')}
+                      </p>
+                      <p className="text-xs text-muted-foreground">
+                        {item.performedBy?.name || item.role || 'System'} 
+                        <span className="mx-1">•</span>
+                        {new Date(item.timestamp).toLocaleDateString('en-GB')} at {new Date(item.timestamp).toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                      </p>
+                      {item.comments && (
+                        <p className="text-sm mt-1 bg-muted/50 p-2 rounded text-muted-foreground italic">
+                          "{item.comments}"
+                        </p>
+                      )}
+                       {item.details && (
+                        <p className="text-xs mt-1 text-muted-foreground">
+                          {item.details}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                ))
+              ) : (
+                <div className="space-y-3">
               {/* Quote Created */}
               <div className="flex gap-3">
                 <div className="flex flex-col items-center">
@@ -1334,6 +1396,8 @@ const QuoteDetail = () => {
                     </p>
                   </div>
                 </div>
+              )}
+              </div>
               )}
             </div>
           </div>

@@ -39,7 +39,7 @@ const PurchaseOrderDetail = () => {
   const [showPaymentConfirm, setShowPaymentConfirm] = useState(false);
   const { id } = useParams();
   const navigate = useNavigate();
-  const { isAdmin, isAccountant } = useAuth();
+  const { isAdmin, isAccountant, isDesigner } = useAuth();
   const { socket } = useSocket();
 
   const fetchOrder = useCallback(async () => {
@@ -186,6 +186,7 @@ const PurchaseOrderDetail = () => {
           </div>
         </div>
 
+        {!isDesigner && (
         <div className="flex gap-2">
           <Button
             variant={showPreview ? "default" : "outline"}
@@ -214,6 +215,7 @@ const PurchaseOrderDetail = () => {
             {downloadLoading ? 'Downloading...' : 'Download PDF'}
           </Button>
         </div>
+        )}
       </div>
 
       {showPreview ? (
@@ -263,9 +265,30 @@ const PurchaseOrderDetail = () => {
                     </p>
                   </div>
                   <div>
+                    <p className="text-sm text-muted-foreground mb-1">Delivery Date</p>
+                    <p className="font-medium">
+                      {(() => {
+                        const deliveryDate = order.deliveryDate 
+                          ? new Date(order.deliveryDate)
+                          : (() => {
+                              const d = new Date(order.createdAt);
+                              d.setDate(d.getDate() + 45);
+                              return d;
+                            })();
+                        return deliveryDate.toLocaleDateString('en-GB', {
+                          day: '2-digit',
+                          month: '2-digit',
+                          year: 'numeric',
+                        });
+                      })()}
+                    </p>
+                  </div>
+                  {!isDesigner && (
+                  <div>
                     <p className="text-sm text-muted-foreground mb-1">Total Amount</p>
                     <p className="font-semibold text-lg">₹{order.totalAmount?.toFixed(2) || '0.00'}</p>
                   </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
@@ -290,6 +313,30 @@ const PurchaseOrderDetail = () => {
                     <p className="text-muted-foreground">
                       Phone: {order.manufacturer.phone}
                     </p>
+                  )}
+                  {order.manufacturer?.ccEmails && order.manufacturer.ccEmails.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <span className="text-sm font-medium text-muted-foreground">CC:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {order.manufacturer.ccEmails.map((email, idx) => (
+                          <span key={idx} className="bg-orange-500/10 text-orange-400 px-2 py-0.5 rounded text-sm border border-orange-500/20">
+                            {email}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                  {order.manufacturer?.bccEmails && order.manufacturer.bccEmails.length > 0 && (
+                    <div className="flex items-center gap-2 flex-wrap mt-1">
+                      <span className="text-sm font-medium text-muted-foreground">BCC:</span>
+                      <div className="flex flex-wrap gap-1">
+                        {order.manufacturer.bccEmails.map((email, idx) => (
+                          <span key={idx} className="bg-blue-500/10 text-blue-400 px-2 py-0.5 rounded text-sm border border-blue-500/20">
+                            {email}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
                   )}
                 </div>
               </CardContent>
@@ -407,10 +454,11 @@ const PurchaseOrderDetail = () => {
 
                              <ReadOnlyField label="Quantity" value={item.quantity} />
                              
-                             {!order.hidePurchaseRate && (
+                             <ReadOnlyField label="MRP per strip/unit (₹)" value={item.mrp} />
+                             
+                             {!order.hidePurchaseRate && !isDesigner && (
                                <>
                                <ReadOnlyField label="Rate (₹)" value={item.rate} />
-                               <ReadOnlyField label="MRP per strip/unit (₹)" value={item.mrp} />
                                
                                <div className="space-y-1.5">
                                  <Label className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
