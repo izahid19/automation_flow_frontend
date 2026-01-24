@@ -105,5 +105,12 @@ export const settingsAPI = {
   updatePurchaseOrderMailSettings: (data) => api.put('/settings/po-mail', data),
 };
 
+// Report APIs
+export const reportAPI = {
+  getSalesReport: (params) => api.get('/reports/sales', { params }),
+  getSummary: (params) => api.get('/reports/summary', { params }),
+  getBySalesExecutive: (params) => api.get('/reports/by-sales-executive', { params }),
+};
+
 export default api;
 

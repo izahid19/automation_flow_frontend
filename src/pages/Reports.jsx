@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { quoteAPI, authAPI } from '@/services/api';
+import { reportAPI, quoteAPI, authAPI } from '@/services/api';
 import { useAuth } from '@/context/AuthContext';
 import { useDebounce } from '@/hooks/useDebounce';
 import { Button } from '@/components/ui/button';
@@ -161,7 +161,7 @@ const Reports = () => {
 
     setLoading(true);
     try {
-      const response = await quoteAPI.getAll(params, { signal: abortControllerRef.current.signal });
+      const response = await reportAPI.getSalesReport(params, { signal: abortControllerRef.current.signal });
       const data = response.data.data || [];
       const paginationData = response.data.pagination || { page: 1, pages: 1, total: 0 };
       const totalAmount = response.data.totalFilteredAmount || 0;

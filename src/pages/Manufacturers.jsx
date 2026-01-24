@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { useAuth } from '@/context/AuthContext';
 import { manufacturerAPI } from '../services/api';
 import { Input } from '@/components/ui/input';
 import { Card, CardContent } from '@/components/ui/card';
@@ -257,18 +258,18 @@ const Manufacturers = () => {
           </div>
         ) : (
           manufacturers.map((m) => (
-            <div key={m._id} className="card card-hover">
-              <div className="flex items-start justify-between">
-                <div className="flex items-center gap-3">
-                  <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-[var(--primary)] to-orange-400 flex items-center justify-center text-white font-bold">
+            <div key={m._id} className="card card-hover overflow-hidden">
+              <div className="flex items-start justify-between gap-2">
+                <div className="flex items-center gap-3 min-w-0 flex-1">
+                  <div className="w-10 h-10 shrink-0 rounded-lg bg-gradient-to-br from-[var(--primary)] to-orange-400 flex items-center justify-center text-white font-bold">
                     {m.name.charAt(0).toUpperCase()}
                   </div>
-                  <div>
-                    <p className="font-semibold">{m.name}</p>
-                    <p className="text-sm text-[var(--text-secondary)]">{m.email}</p>
+                  <div className="min-w-0 flex-1">
+                    <p className="font-semibold truncate">{m.name}</p>
+                    <p className="text-sm text-[var(--text-secondary)] truncate">{m.email}</p>
                   </div>
                 </div>
-                <div className="flex gap-1">
+                <div className="flex gap-1 shrink-0">
                   <button
                     onClick={() => handleEdit(m)}
                     className="p-2 hover:bg-[var(--surface-hover)] rounded-lg"
